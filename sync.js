@@ -12,10 +12,35 @@ function mtnExportBackup(){
  const link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download="meu-treino-nutri-backup-completo.json";link.click();
  setTimeout(()=>URL.revokeObjectURL(link.href),1000);
 }
+async function mtnRestoreBackupFile(){
+ const picker=document.createElement("input");picker.type="file";picker.accept=".json,application/json";
+ picker.onchange=async()=>{
+  const file=picker.files?.[0];if(!file)return;
+  if(file.size>5*1024*1024)return alert("Arquivo muito grande. Limite de 5 MB.");
+  let backup;try{backup=JSON.parse(await file.text())}catch{return alert("Arquivo JSON inválido.")}
+  if(backup?.format!=="meu-treino-nutri-backup"||backup.version!==1||!backup.items||typeof backup.items!=="object")return alert("Formato de backup incompatível.");
+  const keys=["mtndata","mtn-workout-v2","mtn-meal-swaps"];
+  const entries=keys.filter(k=>Object.prototype.hasOwnProperty.call(backup.items,k));
+  if(!entries.length)return alert("O arquivo não contém dados reconhecidos.");
+  if(entries.includes("mtndata")&&!Array.isArray(backup.items.mtndata))return alert("Histórico de registros inválido.");
+  if(entries.includes("mtn-workout-v2")&&backup.items["mtn-workout-v2"]!==null&&typeof backup.items["mtn-workout-v2"]!=="object")return alert("Dados de treino inválidos.");
+  if(!confirm("Restaurar "+entries.length+" categorias? O histórico de registros será combinado sem apagar os existentes. Outros ajustes serão substituídos pelo backup."))return;
+  const existing=typeof getLog==="function"?getLog():[];
+  const seen=new Set(existing.map(x=>JSON.stringify([x.at,x.tipo,x.detalhe])));
+  const incoming=Array.isArray(backup.items.mtndata)?backup.items.mtndata.filter(x=>x&&typeof x.at==="string"&&typeof x.tipo==="string"&&typeof x.detalhe==="string"):[];
+  const added=incoming.filter(x=>{const k=JSON.stringify([x.at,x.tipo,x.detalhe]);if(seen.has(k))return false;seen.add(k);return true});
+  const updates={};
+  if(entries.includes("mtndata"))updates.mtndata=JSON.stringify(existing.concat(added).sort((a,b)=>String(a.at).localeCompare(String(b.at))));
+  for(const k of entries.filter(k=>k!=="mtndata"))updates[k]=JSON.stringify(backup.items[k]);
+  try{for(const [k,v] of Object.entries(updates))localStorage.setItem(k,v)}catch{return alert("Falha ao gravar o backup. Verifique o espaço disponível.")}
+  alert("Backup restaurado. "+added.length+" registros adicionados. Recarregue o aplicativo para atualizar o treino.");
+ };
+ picker.click();
+}
 async function mtnCheckConnection(){if(!mtnClient)return alert("Conexão indisponível");const r=await mtnClient.auth.getUser();if(r.error)return alert(r.error.message);if(!r.data.user)return alert("Faça login primeiro");const q=await mtnClient.from("workout_sets").select("id",{head:true,count:"exact"});alert(q.error?q.error.message:"Conexão validada. Séries: "+q.count)}
 async function mtnLogin(){if(!mtnClient)return alert("Conexão indisponível.");const email=prompt("Digite seu e-mail para receber o link de acesso:");if(!email)return;const {error}=await mtnClient.auth.signInWithOtp({email:email.trim(),options:{emailRedirectTo:location.origin+location.pathname}});alert(error?"Erro: "+error.message:"Verifique seu e-mail e abra o link neste dispositivo.")}
 async function mtnLogout(){if(mtnClient){localStorage.removeItem("mtn-sync-owner");await mtnClient.auth.signOut();mtnUser=null;render()}}
-function mtnAuthView(){return '<section><h2>☁️ Sincronização</h2><p id="mtn-sync-status">'+(mtnUser?'Conectado: '+esc(mtnUser.email||"conta autenticada"):'Sem login: seus registros continuam locais')+'</p>'+(mtnUser?'<div class="row"><button onclick="mtnImportLocal()">Enviar histórico local ao banco</button><button onclick="mtnLoadCloud()">Consultar histórico na nuvem</button><button onclick="mtnRestoreCloud()">Restaurar histórico da nuvem</button><button onclick="mtnCheckConnection()">Testar conexão</button><button onclick="mtnExportBackup()">Backup completo</button><button onclick="mtnLogout()">Sair</button></div>':'<button class="primary" onclick="mtnLogin()">Entrar com e-mail</button>')+'<p class="muted">O envio inicial exige sua confirmação. Não apague dados locais antes de conferir a cópia.</p></section>'}
+function mtnAuthView(){return '<section><h2>☁️ Sincronização</h2><p id="mtn-sync-status">'+(mtnUser?'Conectado: '+esc(mtnUser.email||"conta autenticada"):'Sem login: seus registros continuam locais')+'</p>'+(mtnUser?'<div class="row"><button onclick="mtnImportLocal()">Enviar histórico local ao banco</button><button onclick="mtnLoadCloud()">Consultar histórico na nuvem</button><button onclick="mtnRestoreCloud()">Restaurar histórico da nuvem</button><button onclick="mtnCheckConnection()">Testar conexão</button><button onclick="mtnExportBackup()">Backup completo</button><button onclick="mtnRestoreBackupFile()">Restaurar backup</button><button onclick="mtnLogout()">Sair</button></div>':'<button class="primary" onclick="mtnLogin()">Entrar com e-mail</button>')+'<p class="muted">O envio inicial exige sua confirmação. Não apague dados locais antes de conferir a cópia.</p></section>'}
 function mtnTable(kind){return kind==="Treino"?"workout_sets":kind==="Refeição"?"food_entries":kind==="Suplemento"?"supplement_entries":kind==="Peso e cintura"?"body_metrics":kind==="Cardio"?"cardio_entries":"user_preferences"}
 async function mtnSyncPending(){if(!mtnUser||localStorage.getItem("mtn-sync-owner")!==mtnUser.id)return;const list=getLog();let ok=0;for(const item of list){if(await mtnUpload(item))ok++}mtnStatus("Conectado: "+(mtnUser.email||"conta")+" · "+ok+"/"+list.length+" registros verificados");}
 async function mtnRecordId(log){
