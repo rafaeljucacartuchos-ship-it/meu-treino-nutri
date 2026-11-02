@@ -57,7 +57,7 @@ function recordMeal(i){const parts=getMeal(i),t=totals(parts);addLog("Refeição
 let tab="Hoje",chosen=(new Date().getDay()+6)%7;
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function getLog(){try{return JSON.parse(localStorage.getItem("mtndata")||"[]")}catch{return []}}
-function addLog(kind,detail){const a=getLog();a.push({at:new Date().toISOString(),tipo:kind,detalhe:detail});localStorage.setItem("mtndata",JSON.stringify(a));render()}
+function addLog(kind,detail){const a=getLog();a.push({at:new Date().toISOString(),tipo:kind,detalhe:detail});localStorage.setItem("mtndata",JSON.stringify(a));if(typeof mtnUpload==="function")mtnUpload(a[a.length-1]).catch(()=>{});render()}
 
 const WORKOUT_KEY="mtn-workout-v2";
 function workoutRead(){try{return JSON.parse(localStorage.getItem(WORKOUT_KEY)||"null")}catch{return null}}
