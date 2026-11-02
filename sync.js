@@ -23,7 +23,7 @@ async function mtnRestoreBackupFile(){
   const entries=keys.filter(k=>Object.prototype.hasOwnProperty.call(backup.items,k));
   if(!entries.length)return alert("O arquivo não contém dados reconhecidos.");
   if(entries.includes("mtndata")&&!Array.isArray(backup.items.mtndata))return alert("Histórico de registros inválido.");
-  if(entries.includes("mtn-workout-v2")&&backup.items["mtn-workout-v2"]!==null&&typeof backup.items["mtn-workout-v2"]!=="object")return alert("Dados de treino inválidos.");
+  if(entries.includes("mtn-workout-v2")){const w=backup.items["mtn-workout-v2"];if(w!==null&&(!w||typeof w!=="object"||Array.isArray(w)||!Number.isInteger(w.day)||w.day<0||w.day>6||typeof w.started!=="string"||!w.sets||typeof w.sets!=="object"||Array.isArray(w.sets)))return alert("Dados de treino inválidos.");}
   if(entries.includes("mtn-meal-swaps")&&(backup.items["mtn-meal-swaps"]===null||typeof backup.items["mtn-meal-swaps"]!=="object"||Array.isArray(backup.items["mtn-meal-swaps"])))return alert("Substituições alimentares inválidas.");
   if(!confirm("Restaurar "+entries.length+" categorias? O histórico de registros será combinado sem apagar os existentes. Outros ajustes serão substituídos pelo backup."))return;
   const existing=typeof getLog==="function"?getLog():[];
