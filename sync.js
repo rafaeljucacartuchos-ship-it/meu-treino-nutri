@@ -57,6 +57,7 @@ async function mtnRecordId(log){
 }
 async function mtnUpload(log){
  if(!mtnClient||!mtnUser||localStorage.getItem("mtn-sync-owner")!==mtnUser.id)return false;
+ if(!log||typeof log.at!=="string"||!Number.isFinite(Date.parse(log.at))||typeof log.tipo!=="string"||typeof log.detalhe!=="string"){mtnStatus("Registro local inválido: envio ignorado");return false;}
  const id=await mtnRecordId(log);
  const {error}=await mtnClient.from(mtnTable(log.tipo)).upsert({id,user_id:mtnUser.id,recorded_at:log.at,payload:{tipo:log.tipo,detalhe:log.detalhe,local_id:id}},{onConflict:"id",ignoreDuplicates:true});
  if(error){mtnStatus("Falha ao sincronizar: "+error.message);return false}
