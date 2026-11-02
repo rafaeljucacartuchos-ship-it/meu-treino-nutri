@@ -3,7 +3,7 @@ const MTN_URL="https://wndvkpbggwvaxgibwgqd.supabase.co";
 const MTN_PUBLIC_KEY="sb_publishable_jXyyMbDxSl1UOUeLbnCLtw_1G78TFA9";
 let mtnClient=null,mtnUser=null;
 function mtnStatus(message){const el=document.getElementById("mtn-sync-status");if(el)el.textContent=message}
-async function mtnInit(){if(!window.supabase){try{window.supabase=await import("https://esm.sh/@supabase/supabase-js@2.49.10")}catch(e){mtnStatus("Biblioteca de sincronização indisponível. Registros locais preservados.");return}}mtnClient=window.supabase.createClient(MTN_URL,MTN_PUBLIC_KEY,{auth:{persistSession:true,autoRefreshToken:true}});mtnClient.auth.getUser().then(({data,error})=>{mtnUser=error?null:data.user;mtnStatus(mtnUser?"Conectado: "+mtnUser.email:"Sem login: registros apenas neste dispositivo");if(typeof render==="function")render();if(mtnUser)mtnSyncPending().catch(()=>{})});mtnClient.auth.onAuthStateChange((_event,session)=>{mtnUser=session?.user||null;if(typeof render==="function")render()})}
+async function mtnInit(){if(!window.supabase){try{window.supabase=await import("https://esm.sh/@supabase/supabase-js@2.49.10")}catch(e){mtnStatus("Biblioteca de sincronização indisponível. Registros locais preservados.");return}}mtnClient=window.supabase.createClient(MTN_URL,MTN_PUBLIC_KEY,{auth:{persistSession:true,autoRefreshToken:true}});mtnClient.auth.getUser().then(({data,error})=>{mtnUser=error?null:data.user;mtnStatus(mtnUser?"Conectado: "+mtnUser.email:"Sem login: registros apenas neste dispositivo");if(typeof render==="function")render();if(mtnUser&&localStorage.getItem("mtn-sync-owner")===mtnUser.id)mtnSyncPending().catch(()=>{})});mtnClient.auth.onAuthStateChange((_event,session)=>{mtnUser=session?.user||null;if(typeof render==="function")render()})}
 async function mtnLogin(){if(!mtnClient)return alert("Conexão indisponível.");const email=prompt("Digite seu e-mail para receber o link de acesso:");if(!email)return;const {error}=await mtnClient.auth.signInWithOtp({email:email.trim(),options:{emailRedirectTo:location.origin+location.pathname}});alert(error?"Erro: "+error.message:"Verifique seu e-mail e abra o link neste dispositivo.")}
 async function mtnLogout(){if(mtnClient){await mtnClient.auth.signOut();mtnUser=null;render()}}
 function mtnAuthView(){return '<section><h2>☁️ Sincronização</h2><p id="mtn-sync-status">'+(mtnUser?'Conectado: '+esc(mtnUser.email||"conta autenticada"):'Sem login: seus registros continuam locais')+'</p>'+(mtnUser?'<div class="row"><button onclick="mtnImportLocal()">Enviar histórico local ao banco</button><button onclick="mtnLoadCloud()">Consultar histórico na nuvem</button><button onclick="mtnRestoreCloud()">Restaurar histórico da nuvem</button><button onclick="mtnLogout()">Sair</button></div>':'<button class="primary" onclick="mtnLogin()">Entrar com e-mail</button>')+'<p class="muted">O envio inicial exige sua confirmação. Não apague dados locais antes de conferir a cópia.</p></section>'}
@@ -17,7 +17,7 @@ async function mtnRecordId(log){
  return hex.slice(0,8)+"-"+hex.slice(8,12)+"-"+hex.slice(12,16)+"-"+hex.slice(16,20)+"-"+hex.slice(20);
 }
 async function mtnUpload(log){
- if(!mtnClient||!mtnUser)return false;
+ if(!mtnClient||!mtnUser||localStorage.getItem("mtn-sync-owner")!==mtnUser.id)return false;
  const id=await mtnRecordId(log);
  const {error}=await mtnClient.from(mtnTable(log.tipo)).upsert({id,user_id:mtnUser.id,recorded_at:log.at,payload:{tipo:log.tipo,detalhe:log.detalhe,local_id:id}},{onConflict:"id",ignoreDuplicates:true});
  if(error){mtnStatus("Falha ao sincronizar: "+error.message);return false}
@@ -27,7 +27,7 @@ async function mtnImportLocal(){
  if(!mtnUser)return alert("Entre primeiro.");
  const list=getLog();if(!list.length)return alert("Nenhum registro local.");
  if(!confirm("Enviar "+list.length+" registros locais ao banco privado? A importação usa identificadores estáveis para evitar duplicatas futuras."))return;
- let ok=0;for(const log of list){if(await mtnUpload(log))ok++}
+ localStorage.setItem("mtn-sync-owner",mtnUser.id);let ok=0;for(const log of list){if(await mtnUpload(log))ok++}
  alert(ok+" de "+list.length+" registros sincronizados. Os dados locais foram preservados.");
 }
 async function mtnRestoreCloud(){
