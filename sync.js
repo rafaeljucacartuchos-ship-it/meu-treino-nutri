@@ -86,6 +86,7 @@ async function mtnRestoreCloud(){
   }
  }
  const local=getLog();
+ if(!localStorage.getItem("mtn-sync-owner")&&remote.length&&local.length===0){if(!confirm("Vincular este dispositivo à conta "+(mtnUser.email||"atual")+" para sincronizações futuras?"))return;localStorage.setItem("mtn-sync-owner",mtnUser.id)}
  const key=x=>JSON.stringify([x.at,x.tipo,x.detalhe]);
  const seen=new Set(local.map(key));
  const fresh=remote.filter(x=>!seen.has(key(x))&&(seen.add(key(x)),true));
