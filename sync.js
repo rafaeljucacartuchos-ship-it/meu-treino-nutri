@@ -28,7 +28,9 @@ async function mtnRestoreBackupFile(){
   if(!confirm("Restaurar "+entries.length+" categorias? O histórico de registros será combinado sem apagar os existentes. Outros ajustes serão substituídos pelo backup."))return;
   const existing=typeof getLog==="function"?getLog():[];
   const seen=new Set(existing.map(x=>JSON.stringify([x.at,x.tipo,x.detalhe])));
-  const incoming=Array.isArray(backup.items.mtndata)?backup.items.mtndata.filter(x=>x&&typeof x.at==="string"&&typeof x.tipo==="string"&&typeof x.detalhe==="string"):[];
+  const rawIncoming=Array.isArray(backup.items.mtndata)?backup.items.mtndata:[];
+  if(rawIncoming.some(x=>!x||typeof x.at!=="string"||!Number.isFinite(Date.parse(x.at))||typeof x.tipo!=="string"||typeof x.detalhe!=="string"))return alert("Histórico contém registros inválidos. Nenhum dado foi alterado.");
+  const incoming=rawIncoming;
   const added=incoming.filter(x=>{const k=JSON.stringify([x.at,x.tipo,x.detalhe]);if(seen.has(k))return false;seen.add(k);return true});
   const updates={};
   if(entries.includes("mtndata"))updates.mtndata=JSON.stringify(existing.concat(added).sort((a,b)=>String(a.at).localeCompare(String(b.at))));
