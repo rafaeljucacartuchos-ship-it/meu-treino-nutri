@@ -24,6 +24,7 @@ async function mtnRestoreBackupFile(){
   if(!entries.length)return alert("O arquivo não contém dados reconhecidos.");
   if(entries.includes("mtndata")&&!Array.isArray(backup.items.mtndata))return alert("Histórico de registros inválido.");
   if(entries.includes("mtn-workout-v2")&&backup.items["mtn-workout-v2"]!==null&&typeof backup.items["mtn-workout-v2"]!=="object")return alert("Dados de treino inválidos.");
+  if(entries.includes("mtn-meal-swaps")&&(backup.items["mtn-meal-swaps"]===null||typeof backup.items["mtn-meal-swaps"]!=="object"||Array.isArray(backup.items["mtn-meal-swaps"])))return alert("Substituições alimentares inválidas.");
   if(!confirm("Restaurar "+entries.length+" categorias? O histórico de registros será combinado sem apagar os existentes. Outros ajustes serão substituídos pelo backup."))return;
   const existing=typeof getLog==="function"?getLog():[];
   const seen=new Set(existing.map(x=>JSON.stringify([x.at,x.tipo,x.detalhe])));
@@ -33,7 +34,8 @@ async function mtnRestoreBackupFile(){
   if(entries.includes("mtndata"))updates.mtndata=JSON.stringify(existing.concat(added).sort((a,b)=>String(a.at).localeCompare(String(b.at))));
   for(const k of entries.filter(k=>k!=="mtndata"))updates[k]=JSON.stringify(backup.items[k]);
   try{const originals={};for(const k of Object.keys(updates))originals[k]=localStorage.getItem(k);try{for(const [k,v] of Object.entries(updates))localStorage.setItem(k,v)}catch(e){for(const [k,v] of Object.entries(originals)){if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)}throw e}}catch{return alert("Falha ao gravar o backup. Os dados anteriores foram preservados sempre que possível.")}
-  alert("Backup restaurado. "+added.length+" registros adicionados. Recarregue o aplicativo para atualizar o treino.");
+  alert("Backup restaurado. "+added.length+" registros adicionados. O aplicativo será recarregado para aplicar os dados.");
+  location.reload();
  };
  picker.click();
 }
