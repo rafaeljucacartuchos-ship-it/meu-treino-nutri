@@ -88,4 +88,4 @@ if(tab==="Registrar"){v='<section><h2>Registrar alimentação ou observações</
 if(tab==="Evolução"){const logs=getLog().slice().reverse();v='<section><h2>Histórico local</h2><button onclick="const a=document.createElement(\'a\');a.href=URL.createObjectURL(new Blob([JSON.stringify(getLog(),null,2)],{type:\'application/json\'}));a.download=\'meu-treino-nutri-backup.json\';a.click()">Exportar backup</button>'+(!logs.length?'<p>Nenhum registro ainda.</p>':logs.map(x=>'<article><small>'+new Date(x.at).toLocaleString("pt-BR")+' · '+esc(x.tipo)+'</small><p>'+esc(x.detalhe)+'</p></article>').join(''))+'</section>'}
 document.querySelector("#view").innerHTML=v}
 render();if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js").catch(()=>{});
-</script></body></html>
+</script><script defer src="./sync.js"></script></body></html>
