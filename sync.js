@@ -6,7 +6,7 @@ function mtnStatus(message){const el=document.getElementById("mtn-sync-status");
 async function mtnInit(){if(!window.supabase){try{window.supabase=await import("https://esm.sh/@supabase/supabase-js@2.49.10")}catch(e){mtnStatus("Biblioteca de sincronização indisponível. Registros locais preservados.");return}}mtnClient=window.supabase.createClient(MTN_URL,MTN_PUBLIC_KEY,{auth:{persistSession:true,autoRefreshToken:true}});mtnClient.auth.getUser().then(({data,error})=>{mtnUser=error?null:data.user;mtnStatus(mtnUser?"Conectado: "+mtnUser.email:"Sem login: registros apenas neste dispositivo");if(typeof render==="function")render()});mtnClient.auth.onAuthStateChange((_event,session)=>{mtnUser=session?.user||null;if(typeof render==="function")render()})}
 async function mtnLogin(){if(!mtnClient)return alert("Conexão indisponível.");const email=prompt("Digite seu e-mail para receber o link de acesso:");if(!email)return;const {error}=await mtnClient.auth.signInWithOtp({email:email.trim(),options:{emailRedirectTo:location.origin+location.pathname}});alert(error?"Erro: "+error.message:"Verifique seu e-mail e abra o link neste dispositivo.")}
 async function mtnLogout(){if(mtnClient){await mtnClient.auth.signOut();mtnUser=null;render()}}
-function mtnAuthView(){return '<section><h2>☁️ Sincronização</h2><p id="mtn-sync-status">'+(mtnUser?'Conectado: '+esc(mtnUser.email||"conta autenticada"):'Sem login: seus registros continuam locais')+'</p>'+(mtnUser?'<div class="row"><button onclick="mtnImportLocal()">Enviar histórico local ao banco</button><button onclick="mtnLoadCloud()">Consultar histórico na nuvem</button><button onclick="mtnLogout()">Sair</button></div>':'<button class="primary" onclick="mtnLogin()">Entrar com e-mail</button>')+'<p class="muted">O envio inicial exige sua confirmação. Não apague dados locais antes de conferir a cópia.</p></section>'}
+function mtnAuthView(){return '<section><h2>☁️ Sincronização</h2><p id="mtn-sync-status">'+(mtnUser?'Conectado: '+esc(mtnUser.email||"conta autenticada"):'Sem login: seus registros continuam locais')+'</p>'+(mtnUser?'<div class="row"><button onclick="mtnImportLocal()">Enviar histórico local ao banco</button><button onclick="mtnLoadCloud()">Consultar histórico na nuvem</button><button onclick="mtnRestoreCloud()">Restaurar histórico da nuvem</button><button onclick="mtnLogout()">Sair</button></div>':'<button class="primary" onclick="mtnLogin()">Entrar com e-mail</button>')+'<p class="muted">O envio inicial exige sua confirmação. Não apague dados locais antes de conferir a cópia.</p></section>'}
 function mtnTable(kind){return kind==="Treino"?"workout_sets":kind==="Refeição"?"food_entries":kind==="Suplemento"?"supplement_entries":kind==="Peso e cintura"?"body_metrics":kind==="Cardio"?"cardio_entries":"user_preferences"}
 async function mtnRecordId(log){
  const data=new TextEncoder().encode(JSON.stringify([log.at,log.tipo,log.detalhe]));
@@ -28,6 +28,31 @@ async function mtnImportLocal(){
  if(!confirm("Enviar "+list.length+" registros locais ao banco privado? A importação usa identificadores estáveis para evitar duplicatas futuras."))return;
  let ok=0;for(const log of list){if(await mtnUpload(log))ok++}
  alert(ok+" de "+list.length+" registros sincronizados. Os dados locais foram preservados.");
+}
+async function mtnRestoreCloud(){
+ if(!mtnUser)return alert("Entre primeiro.");
+ const tables=["workout_sets","food_entries","body_metrics","supplement_entries","cardio_entries","user_preferences"];
+ const remote=[];
+ for(const table of tables){
+  let from=0;
+  while(true){
+   const {data,error}=await mtnClient.from(table).select("recorded_at,payload").order("recorded_at",{ascending:true}).range(from,from+499);
+   if(error){alert("Erro ao consultar "+table+": "+error.message);return}
+   remote.push(...data.filter(x=>x.payload&&typeof x.payload.detalhe==="string").map(x=>({at:x.recorded_at,tipo:x.payload.tipo||"Registro",detalhe:x.payload.detalhe})));
+   if(data.length<500)break;
+   from+=500;
+  }
+ }
+ const local=getLog();
+ const key=x=>JSON.stringify([x.at,x.tipo,x.detalhe]);
+ const seen=new Set(local.map(key));
+ const fresh=remote.filter(x=>!seen.has(key(x))&&(seen.add(key(x)),true));
+ if(!fresh.length)return alert("Nenhum registro novo na nuvem. Seu histórico local foi preservado.");
+ if(!confirm("Foram encontrados "+fresh.length+" registros adicionais. Deseja adicioná-los ao histórico deste aparelho?"))return;
+ const merged=local.concat(fresh).sort((a,b)=>String(a.at).localeCompare(String(b.at)));
+ localStorage.setItem("mtndata",JSON.stringify(merged));
+ alert(fresh.length+" registros restaurados. Nenhum registro local foi removido.");
+ if(typeof render==="function")render();
 }
 async function mtnLoadCloud(){if(!mtnUser)return;let counts=[];for(const t of ["workout_sets","food_entries","body_metrics","supplement_entries","cardio_entries","user_preferences"]){const {count,error}=await mtnClient.from(t).select("id",{count:"exact",head:true});counts.push(t+": "+(error?"erro":count))}alert("Registros na nuvem:\n"+counts.join("\n"))}
 function mtnChatView(){return '<section><h2>💬 Assistente de treino</h2><p>Abra o projeto Treinos, Nutri e Suplementos no ChatGPT para conversar sobre seus resultados.</p><p><a target="_blank" rel="noopener" href="https://chatgpt.com/">Abrir ChatGPT ↗</a></p><p class="muted">O chat interno com leitura autorizada do banco depende de configurar a API da OpenAI no servidor. Ainda não está ativo. O ChatGPT não recebe automaticamente estes registros.</p></section>'}
