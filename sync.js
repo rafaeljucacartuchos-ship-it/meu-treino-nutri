@@ -72,6 +72,7 @@ async function mtnImportLocal(){
 async function mtnRestoreCloud(){
  if(!mtnUser)return alert("Entre primeiro.");
  const owner=localStorage.getItem("mtn-sync-owner");if(owner&&owner!==mtnUser.id)return alert("Os dados locais pertencem a outra conta. Restauração bloqueada para evitar mistura de históricos.");
+ if(!owner&&getLog().length)return alert("Existem registros locais sem conta vinculada. Antes de restaurar da nuvem, confirme a vinculação em Enviar histórico local ao banco ou faça backup e use um dispositivo sem histórico.");
  const tables=["workout_sets","food_entries","body_metrics","supplement_entries","cardio_entries","user_preferences"];
  const remote=[];
  for(const table of tables){
