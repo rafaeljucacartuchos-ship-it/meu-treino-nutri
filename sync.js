@@ -32,7 +32,7 @@ async function mtnRestoreBackupFile(){
   const updates={};
   if(entries.includes("mtndata"))updates.mtndata=JSON.stringify(existing.concat(added).sort((a,b)=>String(a.at).localeCompare(String(b.at))));
   for(const k of entries.filter(k=>k!=="mtndata"))updates[k]=JSON.stringify(backup.items[k]);
-  try{for(const [k,v] of Object.entries(updates))localStorage.setItem(k,v)}catch{return alert("Falha ao gravar o backup. Verifique o espaço disponível.")}
+  try{const originals={};for(const k of Object.keys(updates))originals[k]=localStorage.getItem(k);try{for(const [k,v] of Object.entries(updates))localStorage.setItem(k,v)}catch(e){for(const [k,v] of Object.entries(originals)){if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)}throw e}}catch{return alert("Falha ao gravar o backup. Os dados anteriores foram preservados sempre que possível.")}
   alert("Backup restaurado. "+added.length+" registros adicionados. Recarregue o aplicativo para atualizar o treino.");
  };
  picker.click();
