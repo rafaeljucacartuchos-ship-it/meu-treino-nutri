@@ -75,7 +75,7 @@ async function mtnRestoreCloud(){
  if(!mtnUser)return alert("Entre primeiro.");
  const owner=localStorage.getItem("mtn-sync-owner");if(owner&&owner!==mtnUser.id)return alert("Os dados locais pertencem a outra conta. Restauração bloqueada para evitar mistura de históricos.");
  if(!owner&&getLog().length)return alert("Existem registros locais sem conta vinculada. Antes de restaurar da nuvem, confirme a vinculação em Enviar histórico local ao banco ou faça backup e use um dispositivo sem histórico.");
- const tables=["workout_sets","food_entries","body_metrics","supplement_entries","cardio_entries","user_preferences"];
+ const tables=["workout_sessions","workout_sets","food_entries","body_metrics","supplement_entries","cardio_entries","user_preferences"];
  const remote=[];
  for(const table of tables){
   let from=0;
@@ -100,6 +100,6 @@ async function mtnRestoreCloud(){
  alert(fresh.length+" registros restaurados. Nenhum registro local foi removido.");
  if(typeof render==="function")render();
 }
-async function mtnLoadCloud(){if(!mtnUser)return;let counts=[];for(const t of ["workout_sets","food_entries","body_metrics","supplement_entries","cardio_entries","user_preferences"]){const {count,error}=await mtnClient.from(t).select("id",{count:"exact",head:true});counts.push(t+": "+(error?"erro":count))}alert("Registros na nuvem:\n"+counts.join("\n"))}
+async function mtnLoadCloud(){if(!mtnUser)return;let counts=[];for(const t of ["workout_sessions","workout_sets","food_entries","body_metrics","supplement_entries","cardio_entries","user_preferences"]){const {count,error}=await mtnClient.from(t).select("id",{count:"exact",head:true});counts.push(t+": "+(error?"erro":count))}alert("Registros na nuvem:\n"+counts.join("\n"))}
 function mtnChatView(){return '<section><h2>💬 Assistente de treino</h2><p>Abra o projeto Treinos, Nutri e Suplementos no ChatGPT para conversar sobre seus resultados.</p><p><a target="_blank" rel="noopener" href="https://chatgpt.com/">Abrir ChatGPT ↗</a></p><p class="muted">O chat interno com leitura autorizada do banco depende de configurar a API da OpenAI no servidor. Ainda não está ativo. O ChatGPT não recebe automaticamente estes registros.</p></section>'}
 window.addEventListener("load",mtnInit);
