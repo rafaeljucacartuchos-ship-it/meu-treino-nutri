@@ -86,14 +86,15 @@ async function mtnRestoreCloud(){
   }
  }
  const local=getLog();
- if(!localStorage.getItem("mtn-sync-owner")&&remote.length&&local.length===0){if(!confirm("Vincular este dispositivo à conta "+(mtnUser.email||"atual")+" para sincronizações futuras?"))return;localStorage.setItem("mtn-sync-owner",mtnUser.id)}
+ const shouldLink=!localStorage.getItem("mtn-sync-owner")&&remote.length>0&&local.length===0;
+ if(shouldLink&&!confirm("Vincular este dispositivo à conta "+(mtnUser.email||"atual")+" para sincronizações futuras?"))return;
  const key=x=>JSON.stringify([x.at,x.tipo,x.detalhe]);
  const seen=new Set(local.map(key));
  const fresh=remote.filter(x=>!seen.has(key(x))&&(seen.add(key(x)),true));
  if(!fresh.length)return alert("Nenhum registro novo na nuvem. Seu histórico local foi preservado.");
  if(!confirm("Foram encontrados "+fresh.length+" registros adicionais. Deseja adicioná-los ao histórico deste aparelho?"))return;
  const merged=local.concat(fresh).sort((a,b)=>String(a.at).localeCompare(String(b.at)));
- localStorage.setItem("mtndata",JSON.stringify(merged));
+ try{localStorage.setItem("mtndata",JSON.stringify(merged));if(shouldLink)localStorage.setItem("mtn-sync-owner",mtnUser.id)}catch(e){alert("Falha ao salvar o histórico restaurado: "+e.message);return}
  alert(fresh.length+" registros restaurados. Nenhum registro local foi removido.");
  if(typeof render==="function")render();
 }
