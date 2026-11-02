@@ -27,10 +27,10 @@ const foodData={
 };
 const mealFoodOptions=[
 {"Carboidratos":["Pão francês","Rap10 tradicional","Tapioca preparada","Cuscuz de milho cozido","Aveia"],"Proteínas":["Ovos","Muçarela","Queijo cottage","Iogurte natural desnatado","Whey 80%","Frango cozido","Patinho cozido","Peixe branco cozido","Sardinha em água escorrida","Atum em água escorrido"],"Frutas":["Mamão","Banana","Maçã","Laranja","Melão"]},
-{"Carboidratos":["Arroz cozido","Batata inglesa cozida","Batata-doce cozida","Macarrão cozido","Mandioca cozida","Feijão cozido"],"Proteínas":["Frango cozido","Patinho cozido","Peixe branco cozido","Atum em água escorrido"],"Vegetais":["Legumes e folhas"],"Gorduras":["Azeite","Abacate","Castanhas"]},
+{"Carboidratos":["Arroz cozido","Batata inglesa cozida","Batata-doce cozida","Macarrão cozido","Mandioca cozida","Feijão cozido"],"Proteínas":["Frango cozido","Patinho cozido","Peixe branco cozido","Atum em água escorrido","Ovos"],"Vegetais":["Legumes e folhas"],"Gorduras":["Azeite","Abacate","Castanhas"]},
 {"Carboidratos":["Pão francês","Rap10 tradicional","Tapioca preparada","Cuscuz de milho cozido","Aveia"],"Proteínas":["Ovos","Muçarela","Queijo cottage","Iogurte natural desnatado","Whey 80%","Frango cozido","Patinho cozido","Peixe branco cozido","Sardinha em água escorrida","Atum em água escorrido"],"Gorduras":["Requeijão light","Abacate","Castanhas"]},
 {"Frutas":["Banana","Mamão","Maçã","Laranja","Melão"],"Proteínas":["Whey 80%","Iogurte natural desnatado","Queijo cottage"]},
-{"Carboidratos":["Arroz cozido","Batata inglesa cozida","Batata-doce cozida","Macarrão cozido","Mandioca cozida","Feijão cozido"],"Proteínas":["Peixe branco cozido","Frango cozido","Patinho cozido","Atum em água escorrido"],"Vegetais":["Legumes e folhas"],"Gorduras":["Azeite","Abacate","Castanhas"]}
+{"Carboidratos":["Arroz cozido","Batata inglesa cozida","Batata-doce cozida","Macarrão cozido","Mandioca cozida","Feijão cozido"],"Proteínas":["Peixe branco cozido","Frango cozido","Patinho cozido","Atum em água escorrido","Ovos"],"Vegetais":["Legumes e folhas"],"Gorduras":["Azeite","Abacate","Castanhas"]}
 ];
 function optionsForMeal(i,p){const options=(mealFoodOptions[i]||{})[p.group]||[p.name];return options.includes(p.name)?options:[p.name,...options]}
 function equivalentGrams(old,n){const d=foodData[n],base=foodData[old.name],key=old.group==="Proteínas"?"p":old.group==="Gorduras"?"f":"c";return d&&base&&d[key]>0?Math.max(5,Math.round(base[key]*old.g/d[key]/5)*5):old.g}
