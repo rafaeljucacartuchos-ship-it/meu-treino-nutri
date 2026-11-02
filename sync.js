@@ -67,8 +67,8 @@ async function mtnImportLocal(){
  const owner=localStorage.getItem("mtn-sync-owner");if(owner&&owner!==mtnUser.id)return alert("Este aparelho contém registros vinculados a outra conta. Para evitar mistura de dados, faça backup e use a conta original.");
  const list=getLog();if(!list.length)return alert("Nenhum registro local.");
  if(!confirm("Vincular "+list.length+" registros deste aparelho à conta "+(mtnUser.email||"atual")+"? Confirme que os registros pertencem a você."))return;
- localStorage.setItem("mtn-sync-owner",mtnUser.id);let ok=0;for(const log of list){if(await mtnUpload(log))ok++}
- alert(ok+" de "+list.length+" registros sincronizados. Os dados locais foram preservados.");
+ localStorage.setItem("mtn-sync-owner",mtnUser.id);let ok=0;for(const log of list){try{if(await mtnUpload(log))ok++}catch(e){mtnStatus("Falha de envio: "+e.message)}}
+ alert(ok+" de "+list.length+" registros sincronizados. "+(ok<list.length?"Alguns registros não foram enviados; tente novamente.":"Envio concluído.")+" Os dados locais foram preservados.");
 }
 async function mtnRestoreCloud(){
  if(!mtnUser)return alert("Entre primeiro.");
