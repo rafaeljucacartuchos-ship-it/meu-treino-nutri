@@ -71,8 +71,8 @@ async function mtnRecordId(log,owner){
 async function mtnUpload(log){
  if(!mtnClient||!mtnUser||localStorage.getItem("mtn-sync-owner")!==mtnUser.id)return false;
  if(!log||typeof log.at!=="string"||!Number.isFinite(Date.parse(log.at))||typeof log.tipo!=="string"||typeof log.detalhe!=="string"){mtnStatus("Registro local inválido: envio ignorado");return false;}
- const id=await mtnRecordId(log,mtnUser.id);
  const owner=mtnUser.id;
+ const id=await mtnRecordId(log,owner);
  if(!mtnUser||mtnUser.id!==owner||localStorage.getItem("mtn-sync-owner")!==owner)return false;
  if(!navigator.onLine){mtnStatus("Sem internet: registro mantido neste dispositivo");return false;}
  const {error}=await mtnClient.from(mtnTable(log.tipo)).upsert({id,user_id:owner,recorded_at:log.at,payload:{tipo:log.tipo,detalhe:log.detalhe,local_id:id}},{onConflict:"id",ignoreDuplicates:true});
