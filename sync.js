@@ -16,6 +16,7 @@ async function mtnRestoreBackupFile(){
  const picker=document.createElement("input");picker.type="file";picker.accept=".json,application/json";
  picker.onchange=async()=>{
   const file=picker.files?.[0];if(!file)return;
+  if(file.size===0)return alert("Arquivo vazio.");
   if(file.size>5*1024*1024)return alert("Arquivo muito grande. Limite de 5 MB.");
   let backup;try{backup=JSON.parse(await file.text())}catch{return alert("Arquivo JSON inválido.")}
   if(backup?.format!=="meu-treino-nutri-backup"||backup.version!==1||!backup.items||typeof backup.items!=="object"||Array.isArray(backup.items))return alert("Formato de backup incompatível.");
