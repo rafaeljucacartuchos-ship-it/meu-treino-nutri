@@ -62,6 +62,9 @@ async function mtnSaveSettingsCloud(){
  const owner=mtnUser.id;if(localStorage.getItem("mtn-sync-owner")!==owner)return alert("Vincule primeiro o histórico local à sua conta.");
  const keys=["mtn-workout-v2","mtn-meal-swaps"],items={};for(const key of keys){const raw=localStorage.getItem(key);if(raw!==null){try{items[key]=JSON.parse(raw)}catch{return alert("Dados locais inválidos: "+key)}}}
  if(!Object.keys(items).length)return alert("Não há treino guiado ou substituições para salvar.");
+ const w=items["mtn-workout-v2"],sw=items["mtn-meal-swaps"];
+ if(w!==undefined&&w!==null&&(!w||typeof w!=="object"||Array.isArray(w)||!Number.isInteger(w.day)||w.day<0||w.day>6||typeof w.started!=="string"||!Number.isFinite(Date.parse(w.started))||!w.sets||typeof w.sets!=="object"||Array.isArray(w.sets)))return alert("Treino local inválido: envio cancelado.");
+ if(sw!==undefined&&(!sw||typeof sw!=="object"||Array.isArray(sw)))return alert("Substituições locais inválidas: envio cancelado.");
  if(!confirm("Substituir na nuvem o último estado de treino guiado e substituições alimentares desta conta?"))return;
  const id=await mtnRecordId({at:"2000-01-01T00:00:00.000Z",tipo:"Estado do aplicativo",detalhe:"estado-v1"},owner);
  if(mtnUser?.id!==owner||localStorage.getItem("mtn-sync-owner")!==owner)return alert("Conta alterada. Envio cancelado.");
