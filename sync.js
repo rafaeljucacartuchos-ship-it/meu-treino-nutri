@@ -20,6 +20,9 @@ async function mtnRestoreBackupFile(){
   let backup;try{backup=JSON.parse(await file.text())}catch{return alert("Arquivo JSON inválido.")}
   if(backup?.format!=="meu-treino-nutri-backup"||backup.version!==1||!backup.items||typeof backup.items!=="object")return alert("Formato de backup incompatível.");
   const keys=["mtndata","mtn-workout-v2","mtn-meal-swaps"];
+  const owner=localStorage.getItem("mtn-sync-owner");
+  if(backup.owner_id&&owner&&backup.owner_id!==owner)return alert("Backup de outra conta: restauração bloqueada.");
+  if(backup.owner_id&&mtnUser&&backup.owner_id!==mtnUser.id)return alert("O backup não pertence à conta conectada.");
   const entries=keys.filter(k=>Object.prototype.hasOwnProperty.call(backup.items,k));
   if(!entries.length)return alert("O arquivo não contém dados reconhecidos.");
   if(entries.includes("mtndata")&&!Array.isArray(backup.items.mtndata))return alert("Histórico de registros inválido.");
