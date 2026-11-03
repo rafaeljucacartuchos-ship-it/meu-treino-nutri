@@ -91,14 +91,16 @@ async function mtnImportLocal(){
 async function mtnRestoreCloud(){
  if(!mtnUser)return alert("Entre primeiro.");
  if(!navigator.onLine)return alert("Sem internet. Seus registros locais foram preservados.");
- const owner=localStorage.getItem("mtn-sync-owner");if(owner&&owner!==mtnUser.id)return alert("Os dados locais pertencem a outra conta. Restauração bloqueada para evitar mistura de históricos.");
+ const accountId=mtnUser.id;
+ const owner=localStorage.getItem("mtn-sync-owner");if(owner&&owner!==accountId)return alert("Os dados locais pertencem a outra conta. Restauração bloqueada para evitar mistura de históricos.");
  if(!owner&&(getLog().length||localStorage.getItem("mtn-workout-v2")||localStorage.getItem("mtn-meal-swaps")))return alert("Existem dados locais sem conta vinculada. Faça um backup antes de restaurar da nuvem e confirme a conta correta.");
  const tables=["workout_sessions","workout_sets","food_entries","body_metrics","supplement_entries","cardio_entries","user_preferences"];
  const remote=[];
  for(const table of tables){
   let from=0;
   while(true){
-   const {data,error}=await mtnClient.from(table).select("recorded_at,payload").eq("user_id",mtnUser.id).order("recorded_at",{ascending:true}).order("id",{ascending:true}).range(from,from+499);
+   const {data,error}=await mtnClient.from(table).select("recorded_at,payload").eq("user_id",accountId).order("recorded_at",{ascending:true}).order("id",{ascending:true}).range(from,from+499);
+   if(!mtnUser||mtnUser.id!==accountId)return alert("Conta alterada durante a consulta. Restauração cancelada.");
    if(error){alert("Erro ao consultar "+table+": "+error.message);return}
    remote.push(...data.filter(x=>x.payload&&typeof x.payload.detalhe==="string").map(x=>({at:x.recorded_at,tipo:x.payload.tipo||"Registro",detalhe:x.payload.detalhe})));
    if(data.length<500)break;
@@ -107,7 +109,7 @@ async function mtnRestoreCloud(){
  }
  const local=getLog();
  const {data:verified,error:authError}=await mtnClient.auth.getUser();
- if(authError||!verified.user||mtnUser.id!==verified.user.id)return alert("Não foi possível confirmar a conta. Restauração cancelada.");
+ if(authError||!verified.user||verified.user.id!==accountId||mtnUser?.id!==accountId)return alert("Não foi possível confirmar a conta. Restauração cancelada.");
  const shouldLink=!localStorage.getItem("mtn-sync-owner")&&remote.length>0&&local.length===0;
  if(shouldLink&&!confirm("Vincular este dispositivo à conta "+(mtnUser.email||"atual")+" para sincronizações futuras?"))return;
  const key=x=>JSON.stringify([x.at,x.tipo,x.detalhe]);
@@ -115,9 +117,9 @@ async function mtnRestoreCloud(){
  const fresh=remote.filter(x=>!seen.has(key(x))&&(seen.add(key(x)),true));
  if(!fresh.length)return alert("Nenhum registro novo na nuvem. Seu histórico local foi preservado.");
  if(!confirm("Foram encontrados "+fresh.length+" registros adicionais. Deseja adicioná-los ao histórico deste aparelho?"))return;
- if(!mtnUser||mtnUser.id!==verified.user.id||(localStorage.getItem("mtn-sync-owner")&&localStorage.getItem("mtn-sync-owner")!==verified.user.id))return alert("A conta ou a vinculação mudou. Restauração cancelada.");
+ if(!mtnUser||mtnUser.id!==accountId||verified.user.id!==accountId||(localStorage.getItem("mtn-sync-owner")&&localStorage.getItem("mtn-sync-owner")!==accountId))return alert("A conta ou a vinculação mudou. Restauração cancelada.");
  const merged=local.concat(fresh).sort((a,b)=>String(a.at).localeCompare(String(b.at)));
- try{localStorage.setItem("mtndata",JSON.stringify(merged));if(shouldLink)localStorage.setItem("mtn-sync-owner",mtnUser.id)}catch(e){alert("Falha ao salvar o histórico restaurado: "+e.message);return}
+ try{localStorage.setItem("mtndata",JSON.stringify(merged));if(shouldLink)localStorage.setItem("mtn-sync-owner",accountId)}catch(e){alert("Falha ao salvar o histórico restaurado: "+e.message);return}
  alert(fresh.length+" registros restaurados. Nenhum registro local foi removido.");
  if(typeof render==="function")render();
 }
