@@ -25,7 +25,7 @@ async function mtnRestoreBackupFile(){
   if(backup.owner_id&&mtnUser&&backup.owner_id!==mtnUser.id)return alert("O backup não pertence à conta conectada.");
   if(owner&&!backup.owner_id)return alert("Backup sem identificação de conta: restauração bloqueada neste dispositivo vinculado.");
   if(backup.owner_id&&!owner&&!mtnUser)return alert("Este backup pertence a uma conta. Entre nessa conta antes de restaurar.");
-  if(backup.owner_id&&typeof backup.owner_id!=="string")return alert("Identificação de conta inválida no backup.");
+  if(backup.owner_id!==undefined&&backup.owner_id!==null&&(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(backup.owner_id))))return alert("Identificação de conta inválida no backup.");
   const entries=keys.filter(k=>Object.prototype.hasOwnProperty.call(backup.items,k));
   if(!entries.length)return alert("O arquivo não contém dados reconhecidos.");
   if(entries.includes("mtndata")&&!Array.isArray(backup.items.mtndata))return alert("Histórico de registros inválido.");
