@@ -32,6 +32,7 @@ async function mtnRestoreBackupFile(){
   if(entries.includes("mtn-workout-v2")){const w=backup.items["mtn-workout-v2"];if(w!==null&&(!w||typeof w!=="object"||Array.isArray(w)||!Number.isInteger(w.day)||w.day<0||w.day>6||typeof w.started!=="string"||!w.sets||typeof w.sets!=="object"||Array.isArray(w.sets)))return alert("Dados de treino inválidos.");}
   if(entries.includes("mtn-meal-swaps")&&(backup.items["mtn-meal-swaps"]===null||typeof backup.items["mtn-meal-swaps"]!=="object"||Array.isArray(backup.items["mtn-meal-swaps"])))return alert("Substituições alimentares inválidas.");
   if(!confirm("Restaurar "+entries.length+" categorias? O histórico de registros será combinado sem apagar os existentes. Outros ajustes serão substituídos pelo backup."))return;
+  if(backup.owner_id&&mtnClient){const check=await mtnClient.auth.getUser();if(check.error||check.data.user?.id!==backup.owner_id)return alert("Não foi possível confirmar a identidade do proprietário do backup.");}
   const existing=typeof getLog==="function"?getLog():[];
   const seen=new Set(existing.map(x=>JSON.stringify([x.at,x.tipo,x.detalhe])));
   const rawIncoming=Array.isArray(backup.items.mtndata)?backup.items.mtndata:[];
