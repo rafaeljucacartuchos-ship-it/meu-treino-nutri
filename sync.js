@@ -102,6 +102,7 @@ async function mtnRestoreCloud(){
  const fresh=remote.filter(x=>!seen.has(key(x))&&(seen.add(key(x)),true));
  if(!fresh.length)return alert("Nenhum registro novo na nuvem. Seu histórico local foi preservado.");
  if(!confirm("Foram encontrados "+fresh.length+" registros adicionais. Deseja adicioná-los ao histórico deste aparelho?"))return;
+ if(!mtnUser||mtnUser.id!==verified.user.id||localStorage.getItem("mtn-sync-owner")&&localStorage.getItem("mtn-sync-owner")!==verified.user.id)return alert("A conta ou a vinculação mudou. Restauração cancelada.");
  const merged=local.concat(fresh).sort((a,b)=>String(a.at).localeCompare(String(b.at)));
  try{localStorage.setItem("mtndata",JSON.stringify(merged));if(shouldLink)localStorage.setItem("mtn-sync-owner",mtnUser.id)}catch(e){alert("Falha ao salvar o histórico restaurado: "+e.message);return}
  alert(fresh.length+" registros restaurados. Nenhum registro local foi removido.");
