@@ -70,7 +70,12 @@ async function mtnSaveSettingsCloud(){
  if(mtnUser?.id!==owner||localStorage.getItem("mtn-sync-owner")!==owner)return alert("Conta alterada. Envio cancelado.");
  const {data:verified,error:authError}=await mtnClient.auth.getUser();
  if(authError||verified.user?.id!==owner||mtnUser?.id!==owner||localStorage.getItem("mtn-sync-owner")!==owner)return alert("Não foi possível confirmar a conta. Envio cancelado.");
- const {error}=await mtnClient.from("user_preferences").upsert({id,user_id:owner,recorded_at:new Date().toISOString(),payload:{tipo:"Estado do aplicativo",version:1,items}},{onConflict:"id"});
+ const {data:existing,error:readError}=await mtnClient.from("user_preferences").select("payload").eq("id",id).eq("user_id",owner).maybeSingle();
+ if(readError)return alert("Não foi possível consultar o estado anterior: "+readError.message);
+ if(existing?.payload&&(!existing.payload.items||typeof existing.payload.items!=="object"||Array.isArray(existing.payload.items)))return alert("Estado remoto incompatível. Envio cancelado.");
+ const mergedItems={...(existing?.payload?.items||{}),...items};
+ if(mtnUser?.id!==owner||localStorage.getItem("mtn-sync-owner")!==owner)return alert("Conta alterada. Envio cancelado.");
+ const {error}=await mtnClient.from("user_preferences").upsert({id,user_id:owner,recorded_at:new Date().toISOString(),payload:{tipo:"Estado do aplicativo",version:1,items:mergedItems}},{onConflict:"id"});
  alert(error?"Falha ao salvar na nuvem: "+error.message:"Estado do aplicativo salvo na nuvem.");
 }
 async function mtnRestoreSettingsCloud(){
