@@ -78,7 +78,7 @@ async function mtnRestoreSettingsCloud(){
  const items=data.payload.items;
  if(!items||typeof items!=="object"||Array.isArray(items))return alert("Backup remoto inválido.");
  const workout=items["mtn-workout-v2"],swaps=items["mtn-meal-swaps"];
- if(workout!==undefined&&(workout===null||typeof workout!=="object"||Array.isArray(workout)))return alert("Treino remoto inválido.");
+ if(workout!==undefined&&workout!==null&&(!workout||typeof workout!=="object"||Array.isArray(workout)||!Number.isInteger(workout.day)||workout.day<0||workout.day>6||typeof workout.started!=="string"||!Number.isFinite(Date.parse(workout.started))||!workout.sets||typeof workout.sets!=="object"||Array.isArray(workout.sets)))return alert("Treino remoto inválido.");
  if(swaps!==undefined&&(!swaps||typeof swaps!=="object"||Array.isArray(swaps)))return alert("Substituições remotas inválidas.");
  if(mtnUser?.id!==owner||localStorage.getItem("mtn-sync-owner")!==linked)return alert("Conta alterada. Restauração cancelada.");
  if(!confirm("Substituir neste aparelho o treino guiado e as substituições alimentares pelos dados salvos na nuvem? Faça backup antes de continuar."))return;
