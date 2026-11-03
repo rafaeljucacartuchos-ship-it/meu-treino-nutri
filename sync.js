@@ -44,6 +44,7 @@ async function mtnRestoreBackupFile(){
   if(backup.owner_id&&mtnUser&&backup.owner_id===mtnUser.id&&!owner){if(existing.length||localStorage.getItem("mtn-workout-v2")||localStorage.getItem("mtn-meal-swaps"))return alert("Este dispositivo já possui dados locais. Faça backup e utilize um perfil vazio para evitar mistura de dados.");updates["mtn-sync-owner"]=backup.owner_id;}
   if(!backup.owner_id&&owner)return alert("Não é permitido substituir dados de uma conta vinculada com backup sem proprietário.");
   if(backup.owner_id&&!owner&&!mtnUser)return alert("Faça login na conta do backup antes de continuar.");
+  if(backup.owner_id&&mtnUser&&backup.owner_id!==mtnUser.id)return alert("A conta autenticada não corresponde ao backup.");
   try{const originals={};for(const k of Object.keys(updates))originals[k]=localStorage.getItem(k);try{for(const [k,v] of Object.entries(updates))localStorage.setItem(k,v)}catch(e){for(const [k,v] of Object.entries(originals)){if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)}throw e}}catch{return alert("Falha ao gravar o backup. Os dados anteriores foram preservados sempre que possível.")}
   alert("Backup restaurado. "+added.length+" registros adicionados. O aplicativo será recarregado para aplicar os dados.");
   location.reload();
