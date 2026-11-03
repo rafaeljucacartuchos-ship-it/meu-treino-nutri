@@ -23,6 +23,7 @@ async function mtnRestoreBackupFile(){
   const owner=localStorage.getItem("mtn-sync-owner");
   if(backup.owner_id&&owner&&backup.owner_id!==owner)return alert("Backup de outra conta: restauração bloqueada.");
   if(backup.owner_id&&mtnUser&&backup.owner_id!==mtnUser.id)return alert("O backup não pertence à conta conectada.");
+  if(owner&&!backup.owner_id)return alert("Backup sem identificação de conta: restauração bloqueada neste dispositivo vinculado.");
   const entries=keys.filter(k=>Object.prototype.hasOwnProperty.call(backup.items,k));
   if(!entries.length)return alert("O arquivo não contém dados reconhecidos.");
   if(entries.includes("mtndata")&&!Array.isArray(backup.items.mtndata))return alert("Histórico de registros inválido.");
