@@ -57,7 +57,7 @@ function recordMeal(i){const parts=getMeal(i),t=totals(parts);addLog("Refeição
 let tab="Hoje",chosen=(new Date().getDay()+6)%7;
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function getLog(){try{return JSON.parse(localStorage.getItem("mtndata")||"[]")}catch{return []}}
-function addLog(kind,detail){const a=getLog();a.push({at:new Date().toISOString(),tipo:kind,detalhe:detail});localStorage.setItem("mtndata",JSON.stringify(a));render()}
+function addLog(kind,detail){const a=getLog();a.push({at:new Date().toISOString(),tipo:kind,detalhe:detail});localStorage.setItem("mtndata",JSON.stringify(a));if(typeof mtnUpload==="function")mtnUpload(a[a.length-1]).catch(()=>{});render()}
 
 const WORKOUT_KEY="mtn-workout-v2";
 function workoutRead(){try{return JSON.parse(localStorage.getItem(WORKOUT_KEY)||"null")}catch{return null}}
@@ -80,12 +80,13 @@ setInterval(timerTick,500);
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")timerTick()});
 
 function nav(t){tab=t;render()}
-function render(){document.querySelector("#nav").innerHTML=["Hoje","Treinos","Cardápio","Registrar","Evolução"].map(t=>'<button class="'+(t===tab?"active":"")+'" onclick="nav(\''+t+'\')">'+t+'</button>').join("");let v="";
+function render(){document.querySelector("#nav").innerHTML=["Hoje","Treinos","Cardápio","Registrar","Evolução","Conta"].map(t=>'<button class="'+(t===tab?"active":"")+'" onclick="nav(\''+t+'\')">'+t+'</button>').join("");let v="";
 if(tab==="Hoje"){const d=plan[(new Date().getDay()+6)%7];v=nutritionSummary()+'<section><h2>🏋️ Treino de hoje</h2><b>'+d.day+' — '+d.name+'</b><p>'+d.ex.length+' exercícios previstos</p><button class="primary" onclick="chosen='+(new Date().getDay()+6)%7+';nav(\'Treinos\')">Abrir treino</button></section><section><h2>🥗 Cardápio de hoje</h2><p class="muted">Toque no alimento para substituir. Registre somente o que realmente consumiu.</p>'+meals.map((m,i)=>mealCard(i)).join('')+'</section>'}
 if(tab==="Treinos"){v=workoutView()}
 if(tab==="Cardápio"){v=nutritionSummary()+'<section><h2>Cardápio interativo</h2><p class="muted">Toque diretamente no alimento para abrir suas opções de troca. Valores nutricionais são estimativas, não uma tabela laboratorial. A dieta está em revisão para ajustar metas e porções.</p>'+meals.map((m,i)=>mealCard(i)).join('')+'</section>'}
 if(tab==="Registrar"){v='<section><h2>Registrar alimentação ou observações</h2><label>Tipo <select id="kind"><option>Refeição</option><option>Peso e cintura</option><option>Suplemento</option><option>Observação</option></select></label><label>Descrição <textarea id="detail" rows="5" style="width:100%" placeholder="Ex.: almoço com 250 g arroz, 100 g feijão..."></textarea></label><button class="primary" onclick="if(document.getElementById(\'detail\').value.trim())addLog(document.getElementById(\'kind\').value,document.getElementById(\'detail\').value)">Salvar registro</button><p class="muted">Para enviar fotos ou conversar por voz, abra este projeto no aplicativo ChatGPT. A ligação automática ainda não está implementada.</p></section>'}
+if(tab==="Conta"){v=mtnAuthView()+mtnChatView()}
 if(tab==="Evolução"){const logs=getLog().slice().reverse();v='<section><h2>Histórico local</h2><button onclick="const a=document.createElement(\'a\');a.href=URL.createObjectURL(new Blob([JSON.stringify(getLog(),null,2)],{type:\'application/json\'}));a.download=\'meu-treino-nutri-backup.json\';a.click()">Exportar backup</button>'+(!logs.length?'<p>Nenhum registro ainda.</p>':logs.map(x=>'<article><small>'+new Date(x.at).toLocaleString("pt-BR")+' · '+esc(x.tipo)+'</small><p>'+esc(x.detalhe)+'</p></article>').join(''))+'</section>'}
 document.querySelector("#view").innerHTML=v}
 render();if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js").catch(()=>{});
-</script></body></html>
+</script><script src="./sync.js"></script></body></html>
