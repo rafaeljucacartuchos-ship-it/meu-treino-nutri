@@ -93,7 +93,8 @@ async function mtnRestoreCloud(){
   }
  }
  const local=getLog();
- if(mtnUser.id!==(await mtnClient.auth.getUser()).data.user?.id)return alert("A conta mudou durante a consulta. Restauração cancelada.");
+ const {data:verified,error:authError}=await mtnClient.auth.getUser();
+ if(authError||!verified.user||mtnUser.id!==verified.user.id)return alert("Não foi possível confirmar a conta. Restauração cancelada.");
  const shouldLink=!localStorage.getItem("mtn-sync-owner")&&remote.length>0&&local.length===0;
  if(shouldLink&&!confirm("Vincular este dispositivo à conta "+(mtnUser.email||"atual")+" para sincronizações futuras?"))return;
  const key=x=>JSON.stringify([x.at,x.tipo,x.detalhe]);
