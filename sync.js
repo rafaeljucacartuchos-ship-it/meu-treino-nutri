@@ -61,8 +61,8 @@ function mtnAuthView(){return '<section><h2>☁️ Sincronização</h2><p id="mt
 function mtnTable(kind){return kind==="Treino"?"workout_sets":kind==="Treino finalizado"?"workout_sessions":kind==="Refeição"?"food_entries":kind==="Suplemento"?"supplement_entries":kind==="Peso e cintura"?"body_metrics":kind==="Cardio"?"cardio_entries":"user_preferences"}
 let mtnSyncRunning=false;
 async function mtnSyncPending(){if(mtnSyncRunning||!mtnUser||localStorage.getItem("mtn-sync-owner")!==mtnUser.id)return;mtnSyncRunning=true;try{const list=getLog();let ok=0;for(const item of list){try{if(await mtnUpload(item))ok++}catch(e){mtnStatus("Falha de envio: "+e.message)}}mtnStatus("Conectado: "+(mtnUser.email||"conta")+" · "+ok+"/"+list.length+" registros verificados"+(ok<list.length?" · envio incompleto":""))}finally{mtnSyncRunning=false}}
-async function mtnRecordId(log){
- const data=new TextEncoder().encode(JSON.stringify([mtnUser?.id||"",log.at,log.tipo,log.detalhe]));
+async function mtnRecordId(log,owner){
+ const data=new TextEncoder().encode(JSON.stringify([owner,log.at,log.tipo,log.detalhe]));
  const bytes=new Uint8Array(await crypto.subtle.digest("SHA-256",data));
  bytes[6]=(bytes[6]&15)|80;bytes[8]=(bytes[8]&63)|128;
  const hex=Array.from(bytes.slice(0,16),b=>b.toString(16).padStart(2,"0")).join("");
@@ -71,7 +71,7 @@ async function mtnRecordId(log){
 async function mtnUpload(log){
  if(!mtnClient||!mtnUser||localStorage.getItem("mtn-sync-owner")!==mtnUser.id)return false;
  if(!log||typeof log.at!=="string"||!Number.isFinite(Date.parse(log.at))||typeof log.tipo!=="string"||typeof log.detalhe!=="string"){mtnStatus("Registro local inválido: envio ignorado");return false;}
- const id=await mtnRecordId(log);
+ const id=await mtnRecordId(log,mtnUser.id);
  const owner=mtnUser.id;
  if(!mtnUser||mtnUser.id!==owner||localStorage.getItem("mtn-sync-owner")!==owner)return false;
  if(!navigator.onLine){mtnStatus("Sem internet: registro mantido neste dispositivo");return false;}
