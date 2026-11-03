@@ -75,6 +75,9 @@ async function mtnSaveSettingsCloud(){
  if(existing?.payload&&(!existing.payload.items||typeof existing.payload.items!=="object"||Array.isArray(existing.payload.items)))return alert("Estado remoto incompatível. Envio cancelado.");
  const overlap=Object.keys(items).filter(key=>Object.prototype.hasOwnProperty.call(existing?.payload?.items||{},key));
  if(overlap.length&&!confirm("A nuvem já contém "+overlap.length+" categoria(s) que serão substituídas pelos dados deste aparelho. Se outro dispositivo tiver alterações mais recentes, elas poderão ser perdidas. Deseja continuar?"))return;
+ const {data:latest,error:latestError}=await mtnClient.from("user_preferences").select("payload").eq("id",id).eq("user_id",owner).maybeSingle();
+ if(latestError)return alert("Falha ao verificar alterações recentes: "+latestError.message);
+ if(JSON.stringify(latest?.payload??null)!==JSON.stringify(existing?.payload??null))return alert("Os dados na nuvem mudaram durante a confirmação. Envio cancelado; consulte a versão atual antes de tentar novamente.");
  const mergedItems={...(existing?.payload?.items||{}),...items};
  if(mtnUser?.id!==owner||localStorage.getItem("mtn-sync-owner")!==owner)return alert("Conta alterada. Envio cancelado.");
  const {error}=await mtnClient.from("user_preferences").upsert({id,user_id:owner,recorded_at:new Date().toISOString(),payload:{tipo:"Estado do aplicativo",version:1,items:mergedItems}},{onConflict:"id"});
