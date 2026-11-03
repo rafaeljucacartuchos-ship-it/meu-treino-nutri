@@ -68,6 +68,8 @@ async function mtnSaveSettingsCloud(){
  if(!confirm("Substituir na nuvem o último estado de treino guiado e substituições alimentares desta conta?"))return;
  const id=await mtnRecordId({at:"2000-01-01T00:00:00.000Z",tipo:"Estado do aplicativo",detalhe:"estado-v1"},owner);
  if(mtnUser?.id!==owner||localStorage.getItem("mtn-sync-owner")!==owner)return alert("Conta alterada. Envio cancelado.");
+ const {data:verified,error:authError}=await mtnClient.auth.getUser();
+ if(authError||verified.user?.id!==owner||mtnUser?.id!==owner||localStorage.getItem("mtn-sync-owner")!==owner)return alert("Não foi possível confirmar a conta. Envio cancelado.");
  const {error}=await mtnClient.from("user_preferences").upsert({id,user_id:owner,recorded_at:new Date().toISOString(),payload:{tipo:"Estado do aplicativo",version:1,items}},{onConflict:"id"});
  alert(error?"Falha ao salvar na nuvem: "+error.message:"Estado do aplicativo salvo na nuvem.");
 }
