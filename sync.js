@@ -98,7 +98,7 @@ async function mtnRestoreCloud(){
  for(const table of tables){
   let from=0;
   while(true){
-   const {data,error}=await mtnClient.from(table).select("recorded_at,payload").order("recorded_at",{ascending:true}).order("id",{ascending:true}).range(from,from+499);
+   const {data,error}=await mtnClient.from(table).select("recorded_at,payload").eq("user_id",mtnUser.id).order("recorded_at",{ascending:true}).order("id",{ascending:true}).range(from,from+499);
    if(error){alert("Erro ao consultar "+table+": "+error.message);return}
    remote.push(...data.filter(x=>x.payload&&typeof x.payload.detalhe==="string").map(x=>({at:x.recorded_at,tipo:x.payload.tipo||"Registro",detalhe:x.payload.detalhe})));
    if(data.length<500)break;
