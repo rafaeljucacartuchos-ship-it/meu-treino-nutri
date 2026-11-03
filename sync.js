@@ -91,7 +91,7 @@ async function mtnRestoreCloud(){
  if(!mtnUser)return alert("Entre primeiro.");
  if(!navigator.onLine)return alert("Sem internet. Seus registros locais foram preservados.");
  const owner=localStorage.getItem("mtn-sync-owner");if(owner&&owner!==mtnUser.id)return alert("Os dados locais pertencem a outra conta. Restauração bloqueada para evitar mistura de históricos.");
- if(!owner&&getLog().length)return alert("Existem registros locais sem conta vinculada. Antes de restaurar da nuvem, confirme a vinculação em Enviar histórico local ao banco ou faça backup e use um dispositivo sem histórico.");
+ if(!owner&&(getLog().length||localStorage.getItem("mtn-workout-v2")||localStorage.getItem("mtn-meal-swaps")))return alert("Existem dados locais sem conta vinculada. Faça um backup antes de restaurar da nuvem e confirme a conta correta.");
  const tables=["workout_sessions","workout_sets","food_entries","body_metrics","supplement_entries","cardio_entries","user_preferences"];
  const remote=[];
  for(const table of tables){
