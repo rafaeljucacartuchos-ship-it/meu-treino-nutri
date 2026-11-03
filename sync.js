@@ -18,7 +18,7 @@ async function mtnRestoreBackupFile(){
   const file=picker.files?.[0];if(!file)return;
   if(file.size>5*1024*1024)return alert("Arquivo muito grande. Limite de 5 MB.");
   let backup;try{backup=JSON.parse(await file.text())}catch{return alert("Arquivo JSON inválido.")}
-  if(backup?.format!=="meu-treino-nutri-backup"||backup.version!==1||!backup.items||typeof backup.items!=="object")return alert("Formato de backup incompatível.");
+  if(backup?.format!=="meu-treino-nutri-backup"||backup.version!==1||!backup.items||typeof backup.items!=="object"||Array.isArray(backup.items))return alert("Formato de backup incompatível.");
   const keys=["mtndata","mtn-workout-v2","mtn-meal-swaps"];
   const owner=localStorage.getItem("mtn-sync-owner");
   if(backup.owner_id&&owner&&backup.owner_id!==owner)return alert("Backup de outra conta: restauração bloqueada.");
