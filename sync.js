@@ -60,7 +60,7 @@ async function mtnLogout(){if(!mtnClient)return;if(!confirm("Sair da conta? Os r
 async function mtnSaveSettingsCloud(){
  if(!mtnClient||!mtnUser||!navigator.onLine)return alert("Entre na conta e conecte-se à internet.");
  const owner=mtnUser.id;if(localStorage.getItem("mtn-sync-owner")!==owner)return alert("Vincule primeiro o histórico local à sua conta.");
- const keys=["mtn-workout-v2","mtn-meal-swaps"],items={};for(const key of keys){const raw=localStorage.getItem(key);if(raw!==null){try{items[key]=JSON.parse(raw)}catch{return alert("Dados locais inválidos: "+key)}}}
+ const keys=["mtn-workout-v2","mtn-meal-swaps"],items={},snapshots={};for(const key of keys){const raw=localStorage.getItem(key);snapshots[key]=raw;if(raw!==null){try{items[key]=JSON.parse(raw)}catch{return alert("Dados locais inválidos: "+key)}}}
  if(!Object.keys(items).length)return alert("Não há treino guiado ou substituições para salvar.");
  const w=items["mtn-workout-v2"],sw=items["mtn-meal-swaps"];
  if(w!==undefined&&w!==null&&(!w||typeof w!=="object"||Array.isArray(w)||!Number.isInteger(w.day)||w.day<0||w.day>6||typeof w.started!=="string"||!Number.isFinite(Date.parse(w.started))||!w.sets||typeof w.sets!=="object"||Array.isArray(w.sets)))return alert("Treino local inválido: envio cancelado.");
@@ -78,6 +78,7 @@ async function mtnSaveSettingsCloud(){
  const {data:latest,error:latestError}=await mtnClient.from("user_preferences").select("payload").eq("id",id).eq("user_id",owner).maybeSingle();
  if(latestError)return alert("Falha ao verificar alterações recentes: "+latestError.message);
  if(JSON.stringify(latest?.payload??null)!==JSON.stringify(existing?.payload??null))return alert("Os dados na nuvem mudaram durante a confirmação. Envio cancelado; consulte a versão atual antes de tentar novamente.");
+ if(keys.some(key=>localStorage.getItem(key)!==snapshots[key]))return alert("Os dados deste aparelho mudaram durante o envio. Operação cancelada; tente novamente para salvar a versão mais recente.");
  const mergedItems={...(existing?.payload?.items||{}),...items};
  if(mtnUser?.id!==owner||localStorage.getItem("mtn-sync-owner")!==owner)return alert("Conta alterada. Envio cancelado.");
  const {error}=await mtnClient.from("user_preferences").upsert({id,user_id:owner,recorded_at:new Date().toISOString(),payload:{tipo:"Estado do aplicativo",version:1,items:mergedItems}},{onConflict:"id"});
