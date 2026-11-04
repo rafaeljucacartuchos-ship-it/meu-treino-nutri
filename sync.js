@@ -48,7 +48,7 @@ async function mtnInit() {
       localStorage.getItem("mtn-sync-owner") === session.user.id
     ) {
       setTimeout(() => {
-        mtnSyncPending().catch(e =>
+        mtnSyncPending().then(()=>mtnReceiveCloud()).catch(e =>
           mtnStatus("Falha de sincronização: " + e.message)
         );
       }, 0);
@@ -281,6 +281,6 @@ async function mtnChatHistory(){
 }
 function mtnChatView(){return '<section><h2>Análise no ChatGPT</h2><p>Continue registrando treinos, alimentação e evolução neste aplicativo, sem cobrança de API da OpenAI.</p><p><a href="https://chatgpt.com/" target="_blank" rel="noopener">Abrir ChatGPT</a></p><p class="muted">Compartilhe seu histórico aqui no ChatGPT quando quiser uma análise. A integração paga está desativada.</p></section>'}
 
-window.addEventListener("online",()=>{if(mtnUser&&localStorage.getItem("mtn-sync-owner")===mtnUser.id)mtnSyncPending().catch(e=>mtnStatus("Falha ao retomar sincronização: "+e.message))});
-window.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&navigator.onLine&&mtnUser&&localStorage.getItem("mtn-sync-owner")===mtnUser.id)mtnSyncPending().catch(e=>mtnStatus("Falha ao atualizar: "+e.message))});
+window.addEventListener("online",()=>{if(mtnUser&&localStorage.getItem("mtn-sync-owner")===mtnUser.id)mtnSyncPending().then(()=>mtnReceiveCloud()).catch(e=>mtnStatus("Falha ao retomar sincronização: "+e.message))});
+window.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&navigator.onLine&&mtnUser&&localStorage.getItem("mtn-sync-owner")===mtnUser.id)mtnSyncPending().then(()=>mtnReceiveCloud()).catch(e=>mtnStatus("Falha ao atualizar: "+e.message))});
 window.addEventListener("load",mtnInit);
