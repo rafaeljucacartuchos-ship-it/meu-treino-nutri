@@ -242,10 +242,27 @@ async function mtnAskAI(){
  const {data,error}=await mtnClient.functions.invoke("treino-assistente",{body:{question}});
  if(error)throw error;
  if(data?.error)throw Error(data.error);
- output.textContent=data?.answer||"Sem resposta do assistente.";
+ output.textContent=data?.answer||"Sem resposta do assistente.";await mtnChatHistory();
  }catch(e){output.textContent="Assistente indisponível: "+(e.message||"falha de conexão")+". Seus registros continuam acessíveis."}
 }
-function mtnChatView(){return '<section><h2>💬 Assistente conectado ao histórico</h2><p class="muted">Para consultar seus registros, entre na conta. O chat usa um serviço seguro no Supabase; requer chave de API do provedor configurada no servidor.</p><label>Pergunte sobre treinos e alimentação<textarea id="mtn-chat-question" rows="3" maxlength="1200" placeholder="Como evoluíram minhas cargas esta semana?" style="width:100%"></textarea></label><button class="primary" onclick="mtnAskAI()">Enviar pergunta</button><p id="mtn-chat-output" role="status"></p><p class="muted">Esta conversa não é sincronizada automaticamente com o projeto do ChatGPT.</p></section>'}
+async function mtnChatHistory(){
+ const output=document.getElementById("mtn-chat-history");
+ if(!output)return;
+ if(!mtnClient||!mtnUser){output.textContent="Entre na conta para consultar o histórico.";return}
+ output.textContent="Carregando conversas...";
+ const owner=mtnUser.id;
+ const {data,error}=await mtnClient.from("chat_messages").select("role,content,recorded_at").eq("user_id",owner).order("recorded_at",{ascending:false}).limit(20);
+ if(mtnUser?.id!==owner)return;
+ if(error){output.textContent="Não foi possível carregar o histórico: "+error.message;return}
+ output.replaceChildren();
+ if(!data?.length){output.textContent="Nenhuma conversa salva.";return}
+ for(const item of data.slice().reverse()){
+  const article=document.createElement("article"),label=document.createElement("b"),p=document.createElement("p");
+  label.textContent=(item.role==="assistant"?"Assistente":"Você")+" · "+new Date(item.recorded_at).toLocaleString("pt-BR");
+  p.textContent=item.content;article.append(label,p);output.append(article);
+ }
+}
+function mtnChatView(){return '<section><h2>💬 Assistente conectado ao histórico</h2><p class="muted">Para consultar seus registros, entre na conta. O chat usa um serviço seguro no Supabase; requer chave de API do provedor configurada no servidor.</p><label>Pergunte sobre treinos e alimentação<textarea id="mtn-chat-question" rows="3" maxlength="1200" placeholder="Como evoluíram minhas cargas esta semana?" style="width:100%"></textarea></label><button class="primary" onclick="mtnAskAI()">Enviar pergunta</button><button onclick="mtnChatHistory()">Ver últimas conversas</button><p id="mtn-chat-output" role="status"></p><div id="mtn-chat-history"></div><p class="muted">Esta conversa não é sincronizada automaticamente com o projeto do ChatGPT.</p></section>'}
 window.addEventListener("online",()=>{if(mtnUser&&localStorage.getItem("mtn-sync-owner")===mtnUser.id)mtnSyncPending().catch(e=>mtnStatus("Falha ao retomar sincronização: "+e.message))});
 window.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&navigator.onLine&&mtnUser&&localStorage.getItem("mtn-sync-owner")===mtnUser.id)mtnSyncPending().catch(e=>mtnStatus("Falha ao atualizar: "+e.message))});
 window.addEventListener("load",mtnInit);
