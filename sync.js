@@ -48,7 +48,7 @@ async function mtnInit() {
       localStorage.getItem("mtn-sync-owner") === session.user.id
     ) {
       setTimeout(() => {
-        mtnSyncPending().catch(e =>
+        mtnSyncPending().then(()=>mtnReceiveCloud()).catch(e =>
           mtnStatus("Falha de sincronização: " + e.message)
         );
       }, 0);
@@ -115,7 +115,7 @@ async function mtnRestoreBackupFile(){
  picker.click();
 }
 async function mtnCheckConnection(){if(!mtnClient)return alert("Conexão indisponível");const r=await mtnClient.auth.getUser();if(r.error)return alert(r.error.message);if(!r.data.user)return alert("Faça login primeiro");const q=await mtnClient.from("workout_sets").select("id",{head:true,count:"exact"});alert(q.error?q.error.message:"Conexão validada. Séries: "+q.count)}
-async function mtnManualSync(){if(!mtnUser)return alert("Entre na sua conta primeiro.");if(localStorage.getItem("mtn-sync-owner")!==mtnUser.id)return alert("Confirme primeiro a vinculação dos registros à conta.");if(mtnSyncRunning)return alert("Uma sincronização já está em andamento.");if(!navigator.onLine)return alert("Sem internet. Os registros continuam salvos neste dispositivo.");try{await mtnSyncPending();alert("Verifique o resultado da sincronização no status da conta.")}catch(e){alert("Falha ao sincronizar: "+e.message)}}
+async function mtnManualSync(){if(!mtnUser)return alert("Entre na sua conta primeiro.");if(localStorage.getItem("mtn-sync-owner")!==mtnUser.id)return alert("Confirme primeiro a vinculação dos registros à conta.");if(mtnSyncRunning)return alert("Uma sincronização já está em andamento.");if(!navigator.onLine)return alert("Sem internet. Os registros continuam salvos neste dispositivo.");try{await mtnSyncPending();await mtnReceiveCloud();alert("Sincronização concluída. Confira os dados no histórico.")}catch(e){alert("Falha ao sincronizar: "+e.message)}}
 async function mtnLogin(){if(!mtnClient)return alert("Conexão indisponível.");const email=prompt("Digite seu e-mail para receber o link de acesso:");if(!email)return;const {error}=await mtnClient.auth.signInWithOtp({email:email.trim(),options:{emailRedirectTo:location.origin+location.pathname}});alert(error?"Erro: "+error.message:"Verifique seu e-mail e abra o link neste dispositivo.")}
 async function mtnLogout(){if(!mtnClient)return;if(!confirm("Sair da conta? Os registros locais continuarão neste aparelho. Em um aparelho compartilhado, faça um backup e proteja seus dados."))return;const {error}=await mtnClient.auth.signOut();if(error)return alert("Não foi possível sair: "+error.message);mtnUser=null;if(typeof render==="function")render()}
 async function mtnSaveSettingsCloud(){
@@ -231,8 +231,56 @@ async function mtnRestoreCloud(){
  alert(fresh.length+" registros restaurados. Nenhum registro local foi removido.");
  if(typeof render==="function")render();
 }
+async function mtnReceiveCloud(){
+ if(!mtnClient||!mtnUser||localStorage.getItem("mtn-sync-owner")!==mtnUser.id)return;
+ const owner=mtnUser.id, tables=["workout_sessions","workout_sets","food_entries","body_metrics","supplement_entries","cardio_entries","user_preferences"];
+ const remote=[];
+ for(const table of tables){
+  const {data,error}=await mtnClient.from(table).select("recorded_at,payload").eq("user_id",owner).order("recorded_at",{ascending:false}).limit(500);
+  if(error)throw Error(table+": "+error.message);
+  for(const row of data||[])if(typeof row.payload?.detalhe==="string")remote.push({at:row.recorded_at,tipo:row.payload.tipo||"Registro",detalhe:row.payload.detalhe});
+ }
+ if(mtnUser?.id!==owner||localStorage.getItem("mtn-sync-owner")!==owner)return;
+ const existing=getLog(),seen=new Set(existing.map(x=>JSON.stringify([x.at,x.tipo,x.detalhe])));
+ const incoming=remote.filter(x=>{const id=JSON.stringify([x.at,x.tipo,x.detalhe]);if(seen.has(id))return false;seen.add(id);return true});
+ if(!incoming.length)return;
+ localStorage.setItem("mtndata",JSON.stringify(existing.concat(incoming).sort((a,b)=>String(a.at).localeCompare(String(b.at)))));
+ mtnStatus(incoming.length+" registro(s) recuperado(s) da nuvem");
+ if(typeof render==="function")render();
+}
 async function mtnLoadCloud(){if(!mtnUser)return;if(!navigator.onLine)return alert("Sem internet. Consulte os dados da nuvem quando a conexão voltar.");let counts=[];for(const t of ["workout_sessions","workout_sets","food_entries","body_metrics","supplement_entries","cardio_entries","user_preferences"]){const {count,error}=await mtnClient.from(t).select("id",{count:"exact",head:true}).eq("user_id",mtnUser.id);counts.push(t+": "+(error?"erro":count))}alert("Registros na nuvem:\n"+counts.join("\n"))}
-function mtnChatView(){return '<section><h2>💬 Assistente de treino</h2><p>Abra o projeto Treinos, Nutri e Suplementos no ChatGPT para conversar sobre seus resultados.</p><p><a target="_blank" rel="noopener" href="https://chatgpt.com/">Abrir ChatGPT ↗</a></p><p class="muted">O chat interno com leitura autorizada do banco depende de configurar a API da OpenAI no servidor. Ainda não está ativo. O ChatGPT não recebe automaticamente estes registros.</p></section>'}
-window.addEventListener("online",()=>{if(mtnUser&&localStorage.getItem("mtn-sync-owner")===mtnUser.id)mtnSyncPending().catch(e=>mtnStatus("Falha ao retomar sincronização: "+e.message))});
-window.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&navigator.onLine&&mtnUser&&localStorage.getItem("mtn-sync-owner")===mtnUser.id)mtnSyncPending().catch(e=>mtnStatus("Falha ao atualizar: "+e.message))});
+async function mtnAskAI(){
+ const field=document.getElementById("mtn-chat-question"),output=document.getElementById("mtn-chat-output");
+ if(!field||!output)return;
+ const question=field.value.trim();if(!question)return;
+ if(!mtnClient||!mtnUser){output.textContent="Entre na sua conta para usar o assistente.";return}
+ output.textContent="Consultando histórico...";
+ try{
+ const {data,error}=await mtnClient.functions.invoke("treino-assistente",{body:{question}});
+ if(error)throw error;
+ if(data?.error)throw Error(data.error);
+ output.textContent=data?.answer||"Sem resposta do assistente.";await mtnChatHistory();
+ }catch(e){output.textContent="Assistente indisponível: "+(e.message||"falha de conexão")+". Seus registros continuam acessíveis."}
+}
+async function mtnChatHistory(){
+ const output=document.getElementById("mtn-chat-history");
+ if(!output)return;
+ if(!mtnClient||!mtnUser){output.textContent="Entre na conta para consultar o histórico.";return}
+ output.textContent="Carregando conversas...";
+ const owner=mtnUser.id;
+ const {data,error}=await mtnClient.from("chat_messages").select("role,content,recorded_at").eq("user_id",owner).order("recorded_at",{ascending:false}).limit(20);
+ if(mtnUser?.id!==owner)return;
+ if(error){output.textContent="Não foi possível carregar o histórico: "+error.message;return}
+ output.replaceChildren();
+ if(!data?.length){output.textContent="Nenhuma conversa salva.";return}
+ for(const item of data.slice().reverse()){
+  const article=document.createElement("article"),label=document.createElement("b"),p=document.createElement("p");
+  label.textContent=(item.role==="assistant"?"Assistente":"Você")+" · "+new Date(item.recorded_at).toLocaleString("pt-BR");
+  p.textContent=item.content;article.append(label,p);output.append(article);
+ }
+}
+function mtnChatView(){return '<section><h2>Análise no ChatGPT</h2><p>Continue registrando treinos, alimentação e evolução neste aplicativo, sem cobrança de API da OpenAI.</p><p><a href="https://chatgpt.com/" target="_blank" rel="noopener">Abrir ChatGPT</a></p><p class="muted">Compartilhe seu histórico aqui no ChatGPT quando quiser uma análise. A integração paga está desativada.</p></section>'}
+
+window.addEventListener("online",()=>{if(mtnUser&&localStorage.getItem("mtn-sync-owner")===mtnUser.id)mtnSyncPending().then(()=>mtnReceiveCloud()).catch(e=>mtnStatus("Falha ao retomar sincronização: "+e.message))});
+window.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&navigator.onLine&&mtnUser&&localStorage.getItem("mtn-sync-owner")===mtnUser.id)mtnSyncPending().then(()=>mtnReceiveCloud()).catch(e=>mtnStatus("Falha ao atualizar: "+e.message))});
 window.addEventListener("load",mtnInit);

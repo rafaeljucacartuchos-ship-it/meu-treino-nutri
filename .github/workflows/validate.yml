@@ -1,0 +1,29 @@
+name: Validate Meu Treino Nutri
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate JavaScript syntax and required features
+        run: |
+          node --check sync.js
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const vm = require('node:vm');
+          const html = fs.readFileSync('index.html','utf8');
+          const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m=>m[1]).filter(Boolean);
+          if(!scripts.length) throw Error('Missing inline application script');
+          for(const source of scripts) new vm.Script(source);
+          const sync=fs.readFileSync('sync.js','utf8');
+          for(const name of ['mtnAuthView','mtnAskAI','mtnSyncPending','mtnRestoreCloud']) if(!sync.includes('function '+name)) throw Error('Missing '+name);
+          for(const section of ['Treinos','Cardápio','Suplementos','Evolução','Conta']) if(!html.includes(section)) throw Error('Missing '+section);
+          if(/service_role|sk-proj-|sk-[A-Za-z0-9]{20,}/.test(html+'\n'+sync)) throw Error('Possible secret in public code');
+          console.log('Syntax and basic checks passed');
+          NODE
