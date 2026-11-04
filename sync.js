@@ -279,7 +279,8 @@ async function mtnChatHistory(){
   p.textContent=item.content;article.append(label,p);output.append(article);
  }
 }
-function mtnChatView(){return '<section><h2>💬 Assistente conectado ao histórico</h2><p class="muted">Para consultar seus registros, entre na conta. O chat usa um serviço seguro no Supabase; requer chave de API do provedor configurada no servidor.</p><label>Pergunte sobre treinos e alimentação<textarea id="mtn-chat-question" rows="3" maxlength="1200" placeholder="Como evoluíram minhas cargas esta semana?" style="width:100%"></textarea></label><button class="primary" onclick="mtnAskAI()">Enviar pergunta</button><button onclick="mtnChatHistory()">Ver últimas conversas</button><p id="mtn-chat-output" role="status"></p><div id="mtn-chat-history"></div><p class="muted">Esta conversa não é sincronizada automaticamente com o projeto do ChatGPT.</p></section>'}
+function mtnChatView(){return '<section><h2>Análise no ChatGPT</h2><p>Continue registrando treinos, alimentação e evolução neste aplicativo, sem cobrança de API da OpenAI.</p><p><a href="https://chatgpt.com/" target="_blank" rel="noopener">Abrir ChatGPT</a></p><p class="muted">Compartilhe seu histórico aqui no ChatGPT quando quiser uma análise. A integração paga está desativada.</p></section>'}
+
 window.addEventListener("online",()=>{if(mtnUser&&localStorage.getItem("mtn-sync-owner")===mtnUser.id)mtnSyncPending().catch(e=>mtnStatus("Falha ao retomar sincronização: "+e.message))});
 window.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&navigator.onLine&&mtnUser&&localStorage.getItem("mtn-sync-owner")===mtnUser.id)mtnSyncPending().catch(e=>mtnStatus("Falha ao atualizar: "+e.message))});
 window.addEventListener("load",mtnInit);
