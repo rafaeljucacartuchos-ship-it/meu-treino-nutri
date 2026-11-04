@@ -232,7 +232,20 @@ async function mtnRestoreCloud(){
  if(typeof render==="function")render();
 }
 async function mtnLoadCloud(){if(!mtnUser)return;if(!navigator.onLine)return alert("Sem internet. Consulte os dados da nuvem quando a conexão voltar.");let counts=[];for(const t of ["workout_sessions","workout_sets","food_entries","body_metrics","supplement_entries","cardio_entries","user_preferences"]){const {count,error}=await mtnClient.from(t).select("id",{count:"exact",head:true}).eq("user_id",mtnUser.id);counts.push(t+": "+(error?"erro":count))}alert("Registros na nuvem:\n"+counts.join("\n"))}
-function mtnChatView(){return '<section><h2>💬 Assistente de treino</h2><p>Abra o projeto Treinos, Nutri e Suplementos no ChatGPT para conversar sobre seus resultados.</p><p><a target="_blank" rel="noopener" href="https://chatgpt.com/">Abrir ChatGPT ↗</a></p><p class="muted">O chat interno com leitura autorizada do banco depende de configurar a API da OpenAI no servidor. Ainda não está ativo. O ChatGPT não recebe automaticamente estes registros.</p></section>'}
+async function mtnAskAI(){
+ const field=document.getElementById("mtn-chat-question"),output=document.getElementById("mtn-chat-output");
+ if(!field||!output)return;
+ const question=field.value.trim();if(!question)return;
+ if(!mtnClient||!mtnUser){output.textContent="Entre na sua conta para usar o assistente.";return}
+ output.textContent="Consultando histórico...";
+ try{
+ const {data,error}=await mtnClient.functions.invoke("treino-assistente",{body:{question}});
+ if(error)throw error;
+ if(data?.error)throw Error(data.error);
+ output.textContent=data?.answer||"Sem resposta do assistente.";
+ }catch(e){output.textContent="Assistente indisponível: "+(e.message||"falha de conexão")+". Seus registros continuam acessíveis."}
+}
+function mtnChatView(){return '<section><h2>💬 Assistente conectado ao histórico</h2><p class="muted">Para consultar seus registros, entre na conta. O chat usa um serviço seguro no Supabase; requer chave de API do provedor configurada no servidor.</p><label>Pergunte sobre treinos e alimentação<textarea id="mtn-chat-question" rows="3" maxlength="1200" placeholder="Como evoluíram minhas cargas esta semana?" style="width:100%"></textarea></label><button class="primary" onclick="mtnAskAI()">Enviar pergunta</button><p id="mtn-chat-output" role="status"></p><p class="muted">Esta conversa não é sincronizada automaticamente com o projeto do ChatGPT.</p></section>'}
 window.addEventListener("online",()=>{if(mtnUser&&localStorage.getItem("mtn-sync-owner")===mtnUser.id)mtnSyncPending().catch(e=>mtnStatus("Falha ao retomar sincronização: "+e.message))});
 window.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&navigator.onLine&&mtnUser&&localStorage.getItem("mtn-sync-owner")===mtnUser.id)mtnSyncPending().catch(e=>mtnStatus("Falha ao atualizar: "+e.message))});
 window.addEventListener("load",mtnInit);
