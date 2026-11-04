@@ -115,7 +115,7 @@ async function mtnRestoreBackupFile(){
  picker.click();
 }
 async function mtnCheckConnection(){if(!mtnClient)return alert("Conexão indisponível");const r=await mtnClient.auth.getUser();if(r.error)return alert(r.error.message);if(!r.data.user)return alert("Faça login primeiro");const q=await mtnClient.from("workout_sets").select("id",{head:true,count:"exact"});alert(q.error?q.error.message:"Conexão validada. Séries: "+q.count)}
-async function mtnManualSync(){if(!mtnUser)return alert("Entre na sua conta primeiro.");if(localStorage.getItem("mtn-sync-owner")!==mtnUser.id)return alert("Confirme primeiro a vinculação dos registros à conta.");if(mtnSyncRunning)return alert("Uma sincronização já está em andamento.");if(!navigator.onLine)return alert("Sem internet. Os registros continuam salvos neste dispositivo.");try{await mtnSyncPending();await mtnRestoreCloud();alert("Sincronização concluída. Confira os dados no histórico.")}catch(e){alert("Falha ao sincronizar: "+e.message)}}
+async function mtnManualSync(){if(!mtnUser)return alert("Entre na sua conta primeiro.");if(localStorage.getItem("mtn-sync-owner")!==mtnUser.id)return alert("Confirme primeiro a vinculação dos registros à conta.");if(mtnSyncRunning)return alert("Uma sincronização já está em andamento.");if(!navigator.onLine)return alert("Sem internet. Os registros continuam salvos neste dispositivo.");try{await mtnSyncPending();await mtnReceiveCloud();alert("Sincronização concluída. Confira os dados no histórico.")}catch(e){alert("Falha ao sincronizar: "+e.message)}}
 async function mtnLogin(){if(!mtnClient)return alert("Conexão indisponível.");const email=prompt("Digite seu e-mail para receber o link de acesso:");if(!email)return;const {error}=await mtnClient.auth.signInWithOtp({email:email.trim(),options:{emailRedirectTo:location.origin+location.pathname}});alert(error?"Erro: "+error.message:"Verifique seu e-mail e abra o link neste dispositivo.")}
 async function mtnLogout(){if(!mtnClient)return;if(!confirm("Sair da conta? Os registros locais continuarão neste aparelho. Em um aparelho compartilhado, faça um backup e proteja seus dados."))return;const {error}=await mtnClient.auth.signOut();if(error)return alert("Não foi possível sair: "+error.message);mtnUser=null;if(typeof render==="function")render()}
 async function mtnSaveSettingsCloud(){
@@ -229,6 +229,23 @@ async function mtnRestoreCloud(){
  const merged=local.concat(fresh).sort((a,b)=>String(a.at).localeCompare(String(b.at)));
  try{localStorage.setItem("mtndata",JSON.stringify(merged));if(shouldLink)localStorage.setItem("mtn-sync-owner",accountId)}catch(e){alert("Falha ao salvar o histórico restaurado: "+e.message);return}
  alert(fresh.length+" registros restaurados. Nenhum registro local foi removido.");
+ if(typeof render==="function")render();
+}
+async function mtnReceiveCloud(){
+ if(!mtnClient||!mtnUser||localStorage.getItem("mtn-sync-owner")!==mtnUser.id)return;
+ const owner=mtnUser.id, tables=["workout_sessions","workout_sets","food_entries","body_metrics","supplement_entries","cardio_entries","user_preferences"];
+ const remote=[];
+ for(const table of tables){
+  const {data,error}=await mtnClient.from(table).select("recorded_at,payload").eq("user_id",owner).order("recorded_at",{ascending:false}).limit(500);
+  if(error)throw Error(table+": "+error.message);
+  for(const row of data||[])if(typeof row.payload?.detalhe==="string")remote.push({at:row.recorded_at,tipo:row.payload.tipo||"Registro",detalhe:row.payload.detalhe});
+ }
+ if(mtnUser?.id!==owner||localStorage.getItem("mtn-sync-owner")!==owner)return;
+ const existing=getLog(),seen=new Set(existing.map(x=>JSON.stringify([x.at,x.tipo,x.detalhe])));
+ const incoming=remote.filter(x=>{const id=JSON.stringify([x.at,x.tipo,x.detalhe]);if(seen.has(id))return false;seen.add(id);return true});
+ if(!incoming.length)return;
+ localStorage.setItem("mtndata",JSON.stringify(existing.concat(incoming).sort((a,b)=>String(a.at).localeCompare(String(b.at)))));
+ mtnStatus(incoming.length+" registro(s) recuperado(s) da nuvem");
  if(typeof render==="function")render();
 }
 async function mtnLoadCloud(){if(!mtnUser)return;if(!navigator.onLine)return alert("Sem internet. Consulte os dados da nuvem quando a conexão voltar.");let counts=[];for(const t of ["workout_sessions","workout_sets","food_entries","body_metrics","supplement_entries","cardio_entries","user_preferences"]){const {count,error}=await mtnClient.from(t).select("id",{count:"exact",head:true}).eq("user_id",mtnUser.id);counts.push(t+": "+(error?"erro":count))}alert("Registros na nuvem:\n"+counts.join("\n"))}
