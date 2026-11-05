@@ -1,1 +1,3 @@
 const CACHE="treino-nutri-v3";self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(["./","./index.html","./manifest.webmanifest","./icon.svg","./sync.js"]))));self.addEventListener("fetch",e=>{if(e.request.method==="GET"&&new URL(e.request.url).origin===location.origin)e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)))});
+self.addEventListener("push",event=>{let data={};try{data=event.data?.json()||{}}catch(e){}event.waitUntil(self.registration.showNotification(data.title||"Descanso concluido",{body:data.body||"Hora da proxima serie!",tag:data.tag||"mtn-rest",icon:"./icon.svg"}))});
+self.addEventListener("notificationclick",event=>{event.notification.close();event.waitUntil(clients.openWindow("./"))});
