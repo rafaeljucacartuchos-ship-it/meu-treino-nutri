@@ -3,15 +3,34 @@ const MTN_URL="https://wndvkpbggwvaxgibwgqd.supabase.co";
 const MTN_PUBLIC_KEY="sb_publishable_jXyyMbDxSl1UOUeLbnCLtw_1G78TFA9";
 let mtnClient=null,mtnUser=null;
 let mtnLoginReady=false;
+let mtnRecoverMode=location.hash.includes("type=recovery")||new URLSearchParams(location.search).get("reset")==="1";
 const mtnRememberKey="mtn-remember-login";
 const mtnRemember=()=>localStorage.getItem(mtnRememberKey)!=="no";
 const mtnSessionStorage={getItem:k=>(mtnRemember()?localStorage:sessionStorage).getItem(k),setItem:(k,v)=>(mtnRemember()?localStorage:sessionStorage).setItem(k,v),removeItem:k=>{localStorage.removeItem(k);sessionStorage.removeItem(k)}};
 function mtnGate(){
+ if(mtnRecoverMode){mtnRecoveryView();return}
  let el=document.getElementById("mtn-login-gate");
  if(!el){el=document.createElement("div");el.id="mtn-login-gate";el.style.cssText="position:fixed;inset:0;z-index:99999;background:#0e1726;color:#f5f7fb;overflow:auto;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;font:16px system-ui";document.body.appendChild(el)}
  if(mtnUser){el.style.display="none";return}
  el.style.display="flex";
  el.innerHTML='<div style="width:min(100%,420px);padding:28px 22px;border-radius:22px;background:#19283b;border:1px solid #3c556b;box-sizing:border-box"><h1 style="font-size:26px;margin:0 0 8px">Meu Treino & Nutri</h1><p style="color:#b8cad8">Entre para acessar seus treinos, alimentacao e evolucao.</p><form onsubmit="event.preventDefault();mtnGateLogin()"><label for="mtn-gate-email" style="display:block;margin:16px 0 8px">E-mail</label><input id="mtn-gate-email" type="email" required autocomplete="email" placeholder="voce@exemplo.com" style="box-sizing:border-box;width:100%;padding:14px;background:#0d1928;color:white;border:1px solid #5a6d80;border-radius:10px"><label for="mtn-gate-password" style="display:block;margin:16px 0 8px">Senha</label><input id="mtn-gate-password" type="password" required minlength="6" autocomplete="current-password" placeholder="Sua senha" style="box-sizing:border-box;width:100%;padding:14px;background:#0d1928;color:white;border:1px solid #5a6d80;border-radius:10px"><label style="display:flex;align-items:center;gap:10px;margin:20px 0"><input type="checkbox" id="mtn-gate-remember" '+(mtnRemember()?'checked':'')+'> Manter conectado neste aparelho</label><button class="primary" style="width:100%;padding:14px" type="submit">Entrar</button></form><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:16px"><button type="button" onclick="mtnGateRegister()">Cadastrar novo usuario</button><button type="button" onclick="mtnGateReset()">Esqueci minha senha</button></div><p id="mtn-gate-message" role="status" style="color:#b8cad8;font-size:13px;margin-top:16px">Se voce ja usava acesso por e-mail sem senha, escolha Esqueci minha senha para criar uma.</p></div>';
+}
+function mtnRecoveryView(){
+ let el=document.getElementById("mtn-login-gate");
+ if(!el){el=document.createElement("div");el.id="mtn-login-gate";el.style.cssText="position:fixed;inset:0;z-index:99999;background:#0e1726;color:#f5f7fb;overflow:auto;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;font:16px system-ui";document.body.appendChild(el)}
+ el.style.display="flex";
+ el.innerHTML='<div style="width:min(100%,420px);padding:28px 22px;border-radius:22px;background:#19283b;border:1px solid #3c556b;box-sizing:border-box"><h1 style="font-size:25px;margin:0 0 12px">Redefinir senha</h1><p style="color:#b8cad8">Crie uma senha nova para o Meu Treino & Nutri.</p><form onsubmit="event.preventDefault();mtnRecoverySave()"><label for="mtn-new-password" style="display:block;margin:16px 0 8px">Nova senha</label><input id="mtn-new-password" type="password" autocomplete="new-password" minlength="8" required style="box-sizing:border-box;width:100%;padding:14px;background:#0d1928;color:white;border:1px solid #5a6d80;border-radius:10px"><label for="mtn-confirm-password" style="display:block;margin:16px 0 8px">Confirmar nova senha</label><input id="mtn-confirm-password" type="password" autocomplete="new-password" minlength="8" required style="box-sizing:border-box;width:100%;padding:14px;background:#0d1928;color:white;border:1px solid #5a6d80;border-radius:10px"><button class="primary" type="submit" style="width:100%;padding:14px;margin-top:20px">Salvar nova senha</button></form><p id="mtn-recovery-message" role="status" style="color:#b8cad8;font-size:14px;margin-top:16px">Aguarde a validacao do link de recuperacao.</p><button type="button" onclick="mtnRecoverMode=false;history.replaceState(null,\'\',location.pathname);mtnGate()" style="margin-top:12px">Voltar ao login</button></div>';
+}
+async function mtnRecoverySave(){
+ const msg=document.getElementById("mtn-recovery-message");
+ try{if(!mtnClient)throw Error("Conexao indisponivel.");const a=document.getElementById("mtn-new-password")?.value||"",b=document.getElementById("mtn-confirm-password")?.value||"";
+ if(a.length<8)throw Error("Use pelo menos 8 caracteres.");if(a!==b)throw Error("As senhas nao coincidem.");
+ const {data:{session}}=await mtnClient.auth.getSession();if(!session)throw Error("Link expirado ou aberto em outro navegador. Solicite um novo link pelo login.");
+ msg.textContent="Salvando senha...";const {error}=await mtnClient.auth.updateUser({password:a});if(error)throw error;
+ msg.textContent="Senha alterada com sucesso. Voce ja pode entrar.";
+ mtnRecoverMode=false;history.replaceState(null,"",location.pathname);await mtnClient.auth.signOut({scope:"local"});mtnGate();
+ alert("Senha atualizada! Entre com seu e-mail e a nova senha.");
+ }catch(e){if(msg)msg.textContent="Erro: "+e.message}
 }
 function mtnGateFields(){const email=document.getElementById("mtn-gate-email")?.value.trim()||"",password=document.getElementById("mtn-gate-password")?.value||"";if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw Error("Informe um e-mail valido.");return {email,password}}
 function mtnGateMessage(message){const el=document.getElementById("mtn-gate-message");if(el)el.textContent=message}
@@ -28,7 +47,7 @@ async function mtnGateRegister(){
  mtnGateMessage(data.session?"Conta criada e conectada.":"Cadastro solicitado. Confirme o e-mail recebido para ativar sua conta.");}catch(e){mtnGateMessage("Cadastro: "+e.message)}
 }
 async function mtnGateReset(){
- try{if(!mtnClient)throw Error("Conexao indisponivel.");const {email}=mtnGateFields();const {error}=await mtnClient.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});if(error)throw error;mtnGateMessage("Se o e-mail estiver cadastrado, voce recebera um link para definir sua senha.");}catch(e){mtnGateMessage("Recuperacao: "+e.message)}
+ try{if(!mtnClient)throw Error("Conexao indisponivel.");const {email}=mtnGateFields();const {error}=await mtnClient.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname+"?reset=1"});if(error)throw error;mtnGateMessage("Se o e-mail estiver cadastrado, voce recebera um link para definir sua senha.");}catch(e){mtnGateMessage("Recuperacao: "+e.message)}
 }
 
 function mtnStatus(message){const el=document.getElementById("mtn-sync-status");if(el)el.textContent=message}
@@ -68,10 +87,11 @@ async function mtnInit() {
     );
 
     if (typeof render === "function") render();
+    mtnGate();
   }
 
   mtnClient.auth.onAuthStateChange((event, session) => {
-    if(event==="PASSWORD_RECOVERY"&&session){setTimeout(async()=>{const password=prompt("Digite sua nova senha (minimo de 8 caracteres):");if(!password)return;if(password.length<8)return alert("Senha muito curta.");const {error}=await mtnClient.auth.updateUser({password});alert(error?"Erro ao definir senha: "+error.message:"Senha atualizada com sucesso.");},0)}
+    if(event==="PASSWORD_RECOVERY"){mtnRecoverMode=true;mtnRecoveryView()}
     updateAuth(session);
 
     if (
