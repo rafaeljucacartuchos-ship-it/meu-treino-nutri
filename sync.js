@@ -2,6 +2,29 @@
 const MTN_URL="https://wndvkpbggwvaxgibwgqd.supabase.co";
 const MTN_PUBLIC_KEY="sb_publishable_jXyyMbDxSl1UOUeLbnCLtw_1G78TFA9";
 let mtnClient=null,mtnUser=null;
+let mtnLoginReady=false;
+const mtnRememberKey="mtn-remember-login";
+const mtnRemember=()=>localStorage.getItem(mtnRememberKey)!=="no";
+const mtnSessionStorage={getItem:k=>(mtnRemember()?localStorage:sessionStorage).getItem(k),setItem:(k,v)=>(mtnRemember()?localStorage:sessionStorage).setItem(k,v),removeItem:k=>{localStorage.removeItem(k);sessionStorage.removeItem(k)}};
+function mtnGate(){
+ let el=document.getElementById("mtn-login-gate");
+ if(!el){el=document.createElement("div");el.id="mtn-login-gate";el.style.cssText="position:fixed;inset:0;z-index:99999;background:#0e1726;color:#f5f7fb;overflow:auto;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;font:16px system-ui";document.body.appendChild(el)}
+ if(mtnUser){el.style.display="none";return}
+ el.style.display="flex";
+ el.innerHTML='<div style="width:min(100%,420px);padding:28px 22px;border-radius:22px;background:#19283b;border:1px solid #3c556b;box-sizing:border-box"><h1 style="font-size:26px;margin:0 0 8px">Meu Treino & Nutri</h1><p style="color:#b8cad8">Entre para acessar seus treinos, alimentacao e evolucao.</p><label for="mtn-gate-email" style="display:block;margin:20px 0 8px">Seu e-mail</label><input id="mtn-gate-email" type="email" autocomplete="email" placeholder="voce@exemplo.com" style="width:100%;padding:14px;background:#0d1928;color:white;border:1px solid #5a6d80;border-radius:10px"><label style="display:flex;align-items:center;gap:10px;margin:20px 0"><input type="checkbox" id="mtn-gate-remember" '+(mtnRemember()?'checked':'')+'> Manter conectado neste aparelho</label><button class="primary" style="width:100%;padding:14px" onclick="mtnGateLogin()">Entrar com e-mail</button><p id="mtn-gate-message" style="color:#b8cad8;font-size:13px;margin-top:16px">Na primeira entrada, sera necessario confirmar o link enviado ao seu e-mail. Com a opcao marcada, o login fica salvo neste aparelho.</p></div>';
+}
+async function mtnGateLogin(){
+ const email=document.getElementById("mtn-gate-email")?.value.trim();
+ if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return alert("Informe um e-mail valido.");
+ const remember=!!document.getElementById("mtn-gate-remember")?.checked;
+ if(!mtnClient)return alert("Conexao indisponivel. Tente novamente.");
+ const prior=mtnRemember();
+ if(prior!==remember){await mtnClient.auth.signOut({scope:"local"});localStorage.setItem(mtnRememberKey,remember?"yes":"no")}
+ const message=document.getElementById("mtn-gate-message");if(message)message.textContent="Enviando link de acesso...";
+ const {error}=await mtnClient.auth.signInWithOtp({email,options:{emailRedirectTo:location.origin+location.pathname}});
+ if(message)message.textContent=error?"Falha: "+error.message:"Confira seu e-mail e abra o link neste aparelho. Depois de entrar, voce nao precisara repetir enquanto sua sessao estiver valida e salva.";
+}
+
 function mtnStatus(message){const el=document.getElementById("mtn-sync-status");if(el)el.textContent=message}
 
 async function mtnInit() {
@@ -16,12 +39,12 @@ async function mtnInit() {
     }
   }
 
-  mtnClient = window.supabase.createClient(
+  mtnGate();\n  mtnClient = window.supabase.createClient(
     MTN_URL,
     MTN_PUBLIC_KEY,
     {
       auth: {
-        persistSession: true,
+        persistSession: true,\n        storage: mtnSessionStorage,
         autoRefreshToken: true,
         detectSessionInUrl: true
       }
@@ -283,4 +306,4 @@ function mtnChatView(){return '<section><h2>Análise no ChatGPT</h2><p>Continue 
 
 window.addEventListener("online",()=>{if(mtnUser&&localStorage.getItem("mtn-sync-owner")===mtnUser.id)mtnSyncPending().then(()=>mtnReceiveCloud()).catch(e=>mtnStatus("Falha ao retomar sincronização: "+e.message))});
 window.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&navigator.onLine&&mtnUser&&localStorage.getItem("mtn-sync-owner")===mtnUser.id)mtnSyncPending().then(()=>mtnReceiveCloud()).catch(e=>mtnStatus("Falha ao atualizar: "+e.message))});
-window.addEventListener("load",mtnInit);
+window.addEventListener("load",()=>{mtnGate();mtnInit()});
