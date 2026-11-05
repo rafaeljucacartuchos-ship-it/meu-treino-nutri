@@ -38,7 +38,7 @@ async function mtnGateLogin(){
  try{if(!mtnClient)throw Error("Conexao indisponivel.");const {email,password}=mtnGateFields();if(!password)throw Error("Informe sua senha.");
  const remember=!!document.getElementById("mtn-gate-remember")?.checked;localStorage.setItem(mtnRememberKey,remember?"yes":"no");
  mtnGateMessage("Entrando...");const {error}=await mtnClient.auth.signInWithPassword({email,password});if(error)throw error;
- mtnGateMessage("Login realizado.");}catch(e){mtnGateMessage("Nao foi possivel entrar: "+e.message)}
+ mtnUser=data.session.user; mtnGate();}catch(e){mtnGateMessage("Nao foi possivel entrar: "+e.message)}
 }
 async function mtnGateRegister(){
  try{if(!mtnClient)throw Error("Conexao indisponivel.");const {email,password}=mtnGateFields();if(password.length<8)throw Error("Crie uma senha com pelo menos 8 caracteres.");
