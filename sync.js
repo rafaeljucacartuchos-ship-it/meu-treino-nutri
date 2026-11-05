@@ -37,7 +37,7 @@ function mtnGateMessage(message){const el=document.getElementById("mtn-gate-mess
 async function mtnGateLogin(){
  try{if(!mtnClient)throw Error("Conexao indisponivel.");const {email,password}=mtnGateFields();if(!password)throw Error("Informe sua senha.");
  const remember=!!document.getElementById("mtn-gate-remember")?.checked;localStorage.setItem(mtnRememberKey,remember?"yes":"no");
- mtnGateMessage("Entrando...");const {error}=await mtnClient.auth.signInWithPassword({email,password});if(error)throw error;
+ mtnGateMessage("Entrando...");const {data,error}=await mtnClient.auth.signInWithPassword({email,password});if(error)throw error;if(!data?.session?.user)throw Error("Sessao nao confirmada.");
  mtnUser=data.session.user; mtnGate();}catch(e){mtnGateMessage("Nao foi possivel entrar: "+e.message)}
 }
 async function mtnGateRegister(){
