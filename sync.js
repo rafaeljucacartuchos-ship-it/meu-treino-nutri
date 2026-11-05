@@ -273,9 +273,7 @@ async function mtnReceiveCloud(){
  mtnStatus(incoming.length+" registro(s) recuperado(s) da nuvem");
  if(typeof render==="function")render();
 }
-async function mtnLoadCloud(){if(!mtnUser)return;if(!navigator.onLine)return alert("Sem internet. Consulte os dados da nuvem quando a conexão voltar.");let counts=[];for(const t of ["workout_sessions","workout_sets","food_entries","body_metrics","supplement_entries","cardio_entries","user_preferences"]){const {count,error}=await mtnClient.from(t).select("id",{count:"exact",head:true}).eq("user_id",mtnUser.id);counts.push(t+": "+(error?"erro":count))}alert("Registros na nuvem:
-"+counts.join("
-"))}
+async function mtnLoadCloud(){if(!mtnUser)return;if(!navigator.onLine)return alert("Sem internet. Consulte os dados da nuvem quando a conexão voltar.");let counts=[];for(const t of ["workout_sessions","workout_sets","food_entries","body_metrics","supplement_entries","cardio_entries","user_preferences"]){const {count,error}=await mtnClient.from(t).select("id",{count:"exact",head:true}).eq("user_id",mtnUser.id);counts.push(t+": "+(error?"erro":count))}alert("Registros na nuvem:\n"+counts.join("\n"))}
 async function mtnAskAI(){
  const field=document.getElementById("mtn-chat-question"),output=document.getElementById("mtn-chat-output");
  if(!field||!output)return;
