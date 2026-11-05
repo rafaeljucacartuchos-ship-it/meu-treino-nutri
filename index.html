@@ -102,4 +102,4 @@ if(tab==="Conta"){v=mtnAuthView()+mtnChatView()}
 if(tab==="Evolução"){const logs=getLog().slice().reverse();const measures=logs.filter(x=>x.tipo==="Peso e cintura");v='<section><h2>Histórico local</h2><p class="muted">'+measures.length+' registro(s) de peso e cintura. Os gráficos serão exibidos quando houver medidas numéricas suficientes.</p><button onclick="const a=document.createElement(\'a\');a.href=URL.createObjectURL(new Blob([JSON.stringify(getLog(),null,2)],{type:\'application/json\'}));a.download=\'meu-treino-nutri-backup.json\';a.click()">Exportar backup</button>'+(!logs.length?'<p>Nenhum registro ainda.</p>':logs.map(x=>'<article><small>'+new Date(x.at).toLocaleString("pt-BR")+' · '+esc(x.tipo)+'</small><p>'+esc(x.detalhe)+'</p></article>').join(''))+'</section>'}
 document.querySelector("#view").innerHTML=v}
 render();if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js").catch(()=>{});
-</script><script src="./sync.js"></script></body></html>
+</script><script src="./sync.js?v=login-818605a"></script></body></html>
